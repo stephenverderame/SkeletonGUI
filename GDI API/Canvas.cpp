@@ -92,6 +92,12 @@ Image::Image(const char * file, int x, int y, HWND window) : rawUpdated(false)
 	forcedHeight = height;
 }
 
+Image::Image(int width, int height, int x, int y, HWND window) : width(width), height(height), x(x), y(y), scanline(width), bmp(NULL)
+{
+	rawData = new channel[scanline * height * 3];
+	memset(rawData, 0, scanline * height * 3);
+}
+
 Image::Image() : bmp(NULL)
 {
 }
@@ -180,8 +186,6 @@ void Image::toMonochrome()
 		integralImage[i] = ((int)c.r + c.g + c.b) / 3;
 	}
 	arrayData data{ width, height, integralImage };
-	printf("%d    %d    %d \n", getPoint(0, 0, data), getPoint(1, 0, data), getPoint(2, 0, data));
-	printf("%d    %d    %d \n", integralImage[0], integralImage[1], integralImage[2]); //test GetPoint with random values
 	for (int i = 0; i < width * height; i++) {
 		int x = i % width;
 		int y = i / width;
@@ -190,14 +194,15 @@ void Image::toMonochrome()
 	for (int i = 0; i < width * height; i++) {
 		int x = i % width;
 		int y = i / width;
-		int xp = min(width, x + 11);
-		int yp = min(height, y + 11);
+		int xp = min(width - 1, x + 11);
+		int yp = min(height - 1, y + 11);
 		int xm = max(0, x - 11);
 		int ym = max(0, y - 11);
 		int sum = getPoint(xp, yp, data) - getPoint(xm, yp, data) - getPoint(xp, ym, data) + getPoint(xm, ym, data);
+		sum /= ((xp - xm) * (yp - ym));
 		Color c = getPixel(x, y);
 		int avg = (c.r + c.g + c.b) / 3;
-		Color newColor = avg > sum ? Color{ 0, 0, 0 } : Color{ 255, 255, 255 };
+		Color newColor = avg < sum ? Color{ 0, 0, 0 } : Color{ 255, 255, 255 };
 		setPixel(x, y, newColor);
 	}
 	delete[] integralImage;
@@ -207,7 +212,7 @@ void Image::toMonochrome()
 Canvas::~Canvas()
 {
 	for (auto it = images.begin(); it != images.end(); it++) {
-		delete *it;
+//		delete *it;
 	}
 	for (auto it = labels.begin(); it != labels.end(); it++) {
 		delete *it;

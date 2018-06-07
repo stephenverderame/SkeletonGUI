@@ -9,7 +9,7 @@
 #include <ObjIdl.h>
 #include <time.h>
 #include "Grid.h"
-#include <BasicList.h>
+#include "OCR.h"
 using namespace gui;
 MainPage * mainPage;
 Image * img;
@@ -243,11 +243,15 @@ int main(){
 			if (path.size() > 1) {
 				if (img != nullptr) {
 					display.deleteImage(img);
-					delete img;
+//					delete img;
 				}
 				img = new Image(path.c_str(), 0, 0);
-				img->toMonochrome();
 				display.drawImage(img);
+				img->toMonochrome();
+				POINT origin = { 0, 0 };
+				float f = findSkewAngle(img, &origin);
+				printf("Angle: %f \n", f);
+				rotateImage(img, -f, origin);
 				Scrollbar * scroll = (Scrollbar*)mainPage->getCurrentPage()->getControl("testScroll");
 				scroll->update(max(img->getWidth() - display.getDimensions().width, 2));
 				scroll = (Scrollbar*)mainPage->getCurrentPage()->getControl("scrollVert");
@@ -326,6 +330,5 @@ int main(){
 		}
 	}
 	GUI_CLEANUP(mainPage);
-	DestroyWindow(display);
 	return 0;
 }

@@ -31,7 +31,7 @@ LRESULT CALLBACK Window::windowProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l)
 		gui::GUI::setDimensions(LOWORD(l), HIWORD(l));
 		break;
 	case WM_PAINT:
-		if (boundWindow->can != nullptr)
+		if (boundWindow->can != nullptr) 
 			boundWindow->can->draw();
 		break;
 	}
@@ -132,6 +132,7 @@ Window::~Window()
 	}
 	if (can != nullptr)
 		delete can;
+	DestroyWindow(window);
 }
 void Window::addEventListener(EventListener * e)
 {

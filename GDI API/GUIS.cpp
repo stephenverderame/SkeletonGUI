@@ -19,7 +19,7 @@ std::string loadFromTextFileToWin32ControlTextFormat(char * file) {
 
 gui::Resource gui::GUI::loadResource(int file, int type)
 {
-	Resource res;
+	Resource res = {};
 	HMODULE handle = GetModuleHandle(NULL);
 	HRSRC rc = FindResource(handle, MAKEINTRESOURCE(file), MAKEINTRESOURCE(type));
 	HGLOBAL rcData = LoadResource(handle, rc);
@@ -29,5 +29,6 @@ gui::Resource gui::GUI::loadResource(int file, int type)
 	const char * cpy = (char *)LockResource(rcData);
 	memcpy(res.data, cpy, res.size);
 	res.data[res.size] = '\0';
+	return res;
 
 }

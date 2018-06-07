@@ -10,6 +10,7 @@ struct Color {
 	long colorBufferDataWidth;
 	long colorBufferDataHeight;
 	long colorBufferDataScanline;
+	int avg() { return ((int)r + g + b) / 3; }
 };
 enum txtParams {
 	textNone = NULL,
@@ -58,6 +59,7 @@ private:
 public:
 	Image(const char * file, HWND window = gui::GUI::useWindow());
 	Image(const char * file, int x, int y, HWND window = gui::GUI::useWindow());
+	Image(int width, int height, int x, int y, HWND window = gui::GUI::useWindow());
 	Image();
 	~Image();
 	bool setPixel(int x, int y, Color c);
