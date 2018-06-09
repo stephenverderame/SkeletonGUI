@@ -84,7 +84,10 @@ Image::Image(const char * file, int x, int y, HWND window) : rawUpdated(false)
 	BITMAP bm;
 	ZeroMemory(&bm, sizeof(bm));
 	GetObject(bmp, sizeof(bm), &bm);
-	rawData = (channel*)bm.bmBits;
+	rawData = new channel[bm.bmWidthBytes * bm.bmHeight];
+	for (int i = 0; i < bm.bmWidthBytes * bm.bmHeight; i++) {
+		rawData[i] = ((channel*)bm.bmBits)[i];
+	}
 	scanline = bm.bmWidthBytes;
 	width = bm.bmWidth;
 	height = bm.bmHeight;
@@ -92,10 +95,10 @@ Image::Image(const char * file, int x, int y, HWND window) : rawUpdated(false)
 	forcedHeight = height;
 }
 
-Image::Image(int width, int height, int x, int y, HWND window) : width(width), height(height), x(x), y(y), scanline(width), bmp(NULL)
+Image::Image(int width, int height, int x, int y, HWND window) : width(width), height(height), x(x), y(y), scanline(width * 3), bmp(NULL)
 {
-	rawData = new channel[scanline * height * 3];
-	memset(rawData, 0, scanline * height * 3);
+	rawData = new channel[scanline * height];
+	memset(rawData, 0, scanline * height);
 }
 
 Image::Image() : bmp(NULL)
@@ -111,6 +114,7 @@ Image::~Image()
 
 bool Image::setPixel(int x, int y, Color c)
 {
+	if (x < 0 || x >= width || y < 0 || y >= height) return false;
 	rawData[(height - y - 1) * scanline + x * 3] = c.b;
 	rawData[(height - y - 1) * scanline + x * 3 + 1] = c.g;
 	rawData[(height - y - 1) * scanline + x * 3 + 2] = c.r;
@@ -121,9 +125,6 @@ bool Image::setPixel(int x, int y, Color c)
 Color Image::getPixel(int x, int y)
 {
 	if (x < 0 || x >= width || y < 0 || y >= height) return{ 0, 0, 0 };
-	BITMAP bm;
-	ZeroMemory(&bm, sizeof(bm));
-	GetObject(bmp, sizeof(bm), &bm);
 	Color color;
 	color.b = rawData[(height - y - 1) * scanline + x * 3];
 	color.g = rawData[(height - y - 1) * scanline + x * 3 + 1];
@@ -178,7 +179,8 @@ void Image::setPosition(int x, int y)
 
 void Image::toMonochrome()
 {
-	int * integralImage = new int[width * height];
+	if (integralImage != nullptr) delete[] integralImage;
+	integralImage = new int[width * height];
 	for (int i = 0; i < width * height; i++) {
 		int x = i % width;
 		int y = i / width;
@@ -206,7 +208,45 @@ void Image::toMonochrome()
 		setPixel(x, y, newColor);
 	}
 	delete[] integralImage;
+	integralImage = nullptr;
 
+}
+
+int Image::integralImageValue(int x, int y)
+{
+	if (integralImage == nullptr) {
+		integralImage = new int[width * height];
+		for (int i = 0; i < width * height; i++) {
+			int x = i % width;
+			int y = i / width;
+			Color c = getPixel(x, y);
+			integralImage[i] = ((int)c.r + c.g + c.b) / 3;
+		}
+		arrayData data{ width, height, integralImage };
+		for (int i = 0; i < width * height; i++) {
+			int x = i % width;
+			int y = i / width;
+			integralImage[i] += getPoint(x - 1, y, data) + getPoint(x, y - 1, data) - getPoint(x - 1, y - 1, data);
+		}
+	}
+	if (x < 0 || x >= width || y < 0 || y >= height) return 0;
+	return integralImage[y * width + x];
+}
+
+void Image::resize(int width, int height)
+{
+	this->width = width;
+	this->scanline = width * 3;
+	this->height = height;
+	this->forcedWidth = width;
+	this->forcedHeight = height;
+	delete[] rawData;
+	rawData = new channel[scanline * height];
+	if (integralImage != nullptr) {
+		delete[] integralImage;
+		integralImage = nullptr;
+	}
+	rawUpdated = true;
 }
 
 Canvas::~Canvas()

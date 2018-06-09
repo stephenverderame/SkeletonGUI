@@ -7,9 +7,6 @@ struct Color {
 	channel r;
 	channel g;
 	channel b;
-	long colorBufferDataWidth;
-	long colorBufferDataHeight;
-	long colorBufferDataScanline;
 	int avg() { return ((int)r + g + b) / 3; }
 };
 enum txtParams {
@@ -54,6 +51,7 @@ private:
 	unsigned int width;
 	unsigned int height;
 	bool rawUpdated;
+	int * integralImage;
 private:
 	void convertToBitmap(const char * fileName);
 public:
@@ -78,6 +76,9 @@ public:
 	unsigned int getWidth() { return width; }
 	unsigned int getHeight() { return height; }
 	channel * getRawData() { return rawData; }
+	int integralImageValue(int x, int y);
+	void resize(int width, int height);
+	int getScanline() { return scanline; }
 };
 class Canvas {
 private:

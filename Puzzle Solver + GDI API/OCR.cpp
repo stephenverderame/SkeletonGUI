@@ -8,15 +8,28 @@ POINT matrixMultiply(float * matrix, POINT vector) {
 float findSkewAngle(Image * img, POINT * origin) {
 	int startY = 0;
 	int startX = 0;
+	int totalAvg = img->integralImageValue(img->getWidth() - 1, img->getHeight() - 1) - img->integralImageValue(0, img->getHeight() - 1) - img->integralImageValue(img->getWidth() - 1, 0) + img->integralImageValue(0, 0);
+	totalAvg /= (img->getWidth() * img->getHeight());
+	printf("%d \n", totalAvg);
 	for (int i = 0; i < img->getWidth() * img->getHeight(); i++) {
 		int x = i % img->getWidth();
 		int y = i / img->getWidth();
 		Color c = img->getPixel(x, y);
 		if (c.avg() < 100) {
-			printf("Start (%d,%d) \n", x, y);
-			startY = y;// +7;
-			startX = x;
-			break;
+			int xp = max(x + (.15 * img->getWidth()), img->getWidth() - 1);
+			int yp = max(y + (.15 * img->getHeight()), img->getHeight() - 1);
+			int xm = min(x - (.15 * img->getWidth()), 0);
+			int ym = min(y - (.15 * img->getHeight()), 0);
+			int avg = img->integralImageValue(xp, yp) - img->integralImageValue(xm, yp) - img->integralImageValue(xp, ym) + img->integralImageValue(xm, ym);
+			avg /= (xp - xm) * (yp - ym);
+			avg = abs(avg);
+			if (avg < totalAvg) {
+				printf("Area avg: %d \n", avg);
+				printf("Start (%d,%d) \n", x, y);
+				startY = y;// +7;
+				startX = x;
+				break;
+			}
 		}
 	}
 	if (origin != NULL) *origin = { startX, startY };
@@ -113,31 +126,42 @@ float findSkewAngle(Image * img, POINT * origin) {
 
 void rotateImage(Image * img, float theta, POINT origin)
 {
-	Color * buffer = new Color[img->getWidth() * img->getHeight()];
-	int area = img->getWidth() * img->getHeight();
-	for (int i = 0; i < area; i++) {
-		buffer[i] = Color{ 255, 255, 255 };
+	//resizing is WIP
+	int diagnol = ceil(sqrt(img->getWidth() * img->getWidth() + img->getHeight() * img->getHeight()));
+	Color * buffer = new Color[diagnol * diagnol];
+	//Debugging
+	for (int i = 0; i < diagnol * diagnol; i++) {
+		buffer[i] = Color{ 0, 255, 0 };
 	}
+	//end debugging
 	float rotationMatrix[] = {
 		cos(radians(theta)),  -sin(radians(theta)),
 		sin(radians(theta)),  cos(radians(theta))
 	};
 	for (int i = 0; i < img->getWidth() * img->getHeight(); i++) {
 		int x = i % img->getWidth();
-		int y = i / img->getHeight();
+		int y = i / img->getWidth();
 		Color c = img->getPixel(x, y);
 		POINT rtPt = { x - origin.x, y - origin.y };
 		POINT rotated = matrixMultiply(rotationMatrix, rtPt);
 		rotated.x += origin.x;
 		rotated.y += origin.y;
-		if (rotated.x > 0 && rotated.x < img->getWidth() && rotated.y > 0 && rotated.y < img->getHeight())
-			buffer[rotated.y * img->getWidth() + rotated.x] = c;
+		rotated.x += (diagnol - img->getWidth()) / 2;
+		rotated.y += (diagnol - img->getHeight()) / 2;
+		if (rotated.x > 0 && rotated.x < diagnol && rotated.y > 0 && rotated.y < diagnol)
+			buffer[rotated.y * diagnol + rotated.x] = c;
 	}
-	for (int i = 0; i < img->getWidth() * img->getHeight(); i++) {
-		int x = i % img->getWidth();
-		int y = i / img->getHeight();
+	img->resize(diagnol, diagnol);
+	PAINTSTRUCT p;
+	HDC dc = BeginPaint(gui::GUI::useWindow(), &p);
+	for (int i = 0; i < diagnol * diagnol; i++) {
+		int x = i % diagnol;
+		int y = i / diagnol;
 		img->setPixel(x, y, buffer[i]);
+		Color test = img->getPixel(x, y);
+		SetPixel(dc, x, y, RGB(test.r, test.g, test.b));
 	}
+	EndPaint(gui::GUI::useWindow(), &p);
 	RECT r;
 	GetClientRect(gui::GUI::useWindow(), &r);
 	InvalidateRect(gui::GUI::useWindow(), &r, TRUE);
