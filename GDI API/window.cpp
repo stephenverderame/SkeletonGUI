@@ -122,6 +122,7 @@ Window::Window(char * name, int style)
 	wc.hbrBackground = (HBRUSH)COLOR_WINDOW;
 	wc.lpszClassName = "defWindowClass";
 	windowName = name;
+	SetProcessDPIAware();
 
 
 }

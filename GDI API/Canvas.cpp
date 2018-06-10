@@ -84,10 +84,7 @@ Image::Image(const char * file, int x, int y, HWND window) : rawUpdated(false)
 	BITMAP bm;
 	ZeroMemory(&bm, sizeof(bm));
 	GetObject(bmp, sizeof(bm), &bm);
-	rawData = new channel[bm.bmWidthBytes * bm.bmHeight];
-	for (int i = 0; i < bm.bmWidthBytes * bm.bmHeight; i++) {
-		rawData[i] = ((channel*)bm.bmBits)[i];
-	}
+	rawData = (channel*)bm.bmBits;
 	scanline = bm.bmWidthBytes;
 	width = bm.bmWidth;
 	height = bm.bmHeight;
@@ -237,15 +234,38 @@ void Image::resize(int width, int height)
 {
 	this->width = width;
 	this->scanline = width * 3;
+	int padding = 0;
+	while ((scanline + padding) % 4 != 0) padding++;
+	scanline += padding;
 	this->height = height;
 	this->forcedWidth = width;
 	this->forcedHeight = height;
-	delete[] rawData;
-	rawData = new channel[scanline * height];
+	rawData = nullptr;
 	if (integralImage != nullptr) {
 		delete[] integralImage;
 		integralImage = nullptr;
 	}
+	PAINTSTRUCT p;
+	BITMAPINFOHEADER bi;
+	bi.biBitCount = 24;
+	bi.biClrImportant = 0;
+	bi.biClrUsed = 0;
+	bi.biCompression = 0;
+	bi.biHeight = height;
+	bi.biWidth = width;
+	bi.biSize = sizeof(BITMAPINFOHEADER);
+	bi.biSizeImage = scanline * height;
+	bi.biXPelsPerMeter = 2800;
+	bi.biYPelsPerMeter = 2800;
+	bi.biPlanes = 1;
+	BITMAPINFO bmi;
+	bmi.bmiHeader = bi;
+	DeleteObject(bmp);
+	HDC dc = GetDC(gui::GUI::useWindow());
+	bmp = CreateDIBSection(dc, &bmi, DIB_RGB_COLORS, (void**)&rawData, NULL, NULL);
+	if (bmp == NULL) printf("CreateDIBSection failed! %d \n", GetLastError());
+	ReleaseDC(gui::GUI::useWindow(), dc);
+	if (rawData == nullptr) printf("rawData is null \n");
 	rawUpdated = true;
 }
 

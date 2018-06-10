@@ -1,6 +1,7 @@
 #pragma once
 #include "Canvas.h"
 #include "Event.h"
+#include <WinUser.h>
 struct Dimensions {
 	int x;
 	int y;

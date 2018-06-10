@@ -123,7 +123,63 @@ float findSkewAngle(Image * img, POINT * origin) {
 	return angle;
 
 }
-
+Square detectSearchBorder(Image * img)
+{
+	int * accumulator = new int[img->getWidth()];
+	std::vector<Space> spaces;
+	for (int i = 0; i < img->getWidth(); i++) {
+		for (int y = 0; y < img->getHeight(); y++) {
+			accumulator[i] = img->getPixel(i, y).avg();
+		}
+	}
+	int lastDark = 0;
+	for (int i = 0; i < img->getWidth(); i++) {
+		if (accumulator[i] / img->getHeight() < 128) {
+			if (i - lastDark > 1) spaces.push_back({ lastDark + 1, i - lastDark });
+			lastDark = i;
+		}
+	}
+	int avgSpaceSize = 0;
+	for (Space s : spaces) {
+		avgSpaceSize += s.size;
+	}
+	avgSpaceSize /= spaces.size();
+}
+#ifdef OLD_ROTATE
+void rotateImage(Image * img, float theta, POINT origin)
+{
+	Color * buffer = new Color[img->getWidth() * img->getHeight()];
+	//Debugging
+	for (int i = 0; i < img->getWidth() * img->getHeight(); i++) {
+		buffer[i] = Color{ 0, 255, 0 };
+	}
+	//end debugging
+	float rotationMatrix[] = {
+		cos(radians(theta)),  -sin(radians(theta)),
+		sin(radians(theta)),  cos(radians(theta))
+	};
+	for (int i = 0; i < img->getWidth() * img->getHeight(); i++) {
+		int x = i % img->getWidth();
+		int y = i / img->getWidth();
+		Color c = img->getPixel(x, y);
+		POINT rtPt = { x - origin.x, y - origin.y };
+		POINT rotated = matrixMultiply(rotationMatrix, rtPt);
+		rotated.x += origin.x;
+		rotated.y += origin.y;
+		if (rotated.x > 0 && rotated.x < img->getWidth() && rotated.y > 0 && rotated.y < img->getHeight())
+			buffer[rotated.y * img->getWidth() + rotated.x] = c;
+	}
+	for (int i = 0; i < img->getWidth() * img->getHeight(); i++) {
+		int x = i % img->getWidth();
+		int y = i / img->getWidth();
+		img->setPixel(x, y, buffer[i]);
+	}
+	RECT r;
+	GetClientRect(gui::GUI::useWindow(), &r);
+	InvalidateRect(gui::GUI::useWindow(), &r, TRUE);
+	delete[] buffer;
+}
+#else
 void rotateImage(Image * img, float theta, POINT origin)
 {
 	//resizing is WIP
@@ -157,13 +213,29 @@ void rotateImage(Image * img, float theta, POINT origin)
 	for (int i = 0; i < diagnol * diagnol; i++) {
 		int x = i % diagnol;
 		int y = i / diagnol;
+		channel * bits = img->getRawData();
+		if (bits == nullptr) printf("Bits is null \n");
+//		printf("Max num = %d \n", diagnol * diagnol * 4);
+//		printf("Current num = %d \n", y * diagnol * 4 + x * 3);
+//		bits[(diagnol - y - 1) * diagnol * 3 + x * 3] = buffer[i].b;
+//		bits[(diagnol - y - 1) * diagnol * 3 + x * 3 + 1] = buffer[i].g;
+//		bits[(diagnol - y - 1) * diagnol * 3 + x * 3 + 2] = buffer[i].r;
 		img->setPixel(x, y, buffer[i]);
-		Color test = img->getPixel(x, y);
-		SetPixel(dc, x, y, RGB(test.r, test.g, test.b));
+		//Color test = img->getPixel(x, y);
+		//SetPixel(dc, x, y, RGB(test.r, test.g, test.b));
 	}
 	EndPaint(gui::GUI::useWindow(), &p);
 	RECT r;
 	GetClientRect(gui::GUI::useWindow(), &r);
 	InvalidateRect(gui::GUI::useWindow(), &r, TRUE);
 	delete[] buffer;
+}
+#endif
+std::vector<Square> getCharacterLocations(Image * img, Square border)
+{
+	std::vector<Square> list;
+}
+Rect::operator Square()
+{
+	return{ topLeft.x, topLeft.y, bottomRight.x - topLeft.x, bottomRight.y - topLeft.y };
 }
