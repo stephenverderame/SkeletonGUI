@@ -176,20 +176,16 @@ void Image::setPosition(int x, int y)
 
 void Image::toMonochrome()
 {
-	if (integralImage != nullptr) delete[] integralImage;
-	integralImage = new int[width * height];
-	for (int i = 0; i < width * height; i++) {
-		int x = i % width;
-		int y = i / width;
-		Color c = getPixel(x, y);
-		integralImage[i] = ((int)c.r + c.g + c.b) / 3;
+	if (integralImage == nullptr) {
+		integralImage = new int[width * height];
+		arrayData data{ width, height, integralImage };
+		for (int i = 0; i < width * height; i++) {
+			int x = i % width;
+			int y = i / width;
+			integralImage[i] = getPixel(x, y).avg() + getPoint(x - 1, y, data) + getPoint(x, y - 1, data) - getPoint(x - 1, y - 1, data);
+		}
 	}
 	arrayData data{ width, height, integralImage };
-	for (int i = 0; i < width * height; i++) {
-		int x = i % width;
-		int y = i / width;
-		integralImage[i] += getPoint(x - 1, y, data) + getPoint(x, y - 1, data) - getPoint(x - 1, y - 1, data);
-	}
 	for (int i = 0; i < width * height; i++) {
 		int x = i % width;
 		int y = i / width;
@@ -204,6 +200,21 @@ void Image::toMonochrome()
 		Color newColor = avg < sum ? Color{ 0, 0, 0 } : Color{ 255, 255, 255 };
 		setPixel(x, y, newColor);
 	}
+/*	for (int i = 0; i < width * height; i++) {
+		int x1 = i % width;
+		int y1 = i / width;
+		int sumr = 0, sumg = 0, sumb = 0;
+		for (int x = -1; x <= 1; x++) {
+			for (int y = -1; y <= 1; y++) {
+				if (x1 + x < 0 || x1 + x >= width || y1 + y < 0 || y1 + y > height) continue;
+				sumr += getPixel(x1 + x, y1 + y).r;
+				sumg += getPixel(x1 + x, y1 + y).g;
+				sumb += getPixel(x1 + x, y1 + y).b;
+			}
+		}
+		sumr /= 9; sumg /= 9; sumb /= 9;
+		setPixel(x1, y1, { (channel)sumr, (channel)sumg, (channel)sumb });
+	}*/
 	delete[] integralImage;
 	integralImage = nullptr;
 
@@ -213,17 +224,11 @@ int Image::integralImageValue(int x, int y)
 {
 	if (integralImage == nullptr) {
 		integralImage = new int[width * height];
-		for (int i = 0; i < width * height; i++) {
-			int x = i % width;
-			int y = i / width;
-			Color c = getPixel(x, y);
-			integralImage[i] = ((int)c.r + c.g + c.b) / 3;
-		}
 		arrayData data{ width, height, integralImage };
 		for (int i = 0; i < width * height; i++) {
 			int x = i % width;
 			int y = i / width;
-			integralImage[i] += getPoint(x - 1, y, data) + getPoint(x, y - 1, data) - getPoint(x - 1, y - 1, data);
+			integralImage[i] = getPixel(x, y).avg() + getPoint(x - 1, y, data) + getPoint(x, y - 1, data) - getPoint(x - 1, y - 1, data);
 		}
 	}
 	if (x < 0 || x >= width || y < 0 || y >= height) return 0;

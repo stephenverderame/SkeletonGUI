@@ -18,8 +18,14 @@ struct Space {
 	int start;
 	int size;
 };
+struct Pixel {
+	int x;
+	int y;
+	Color c;
+};
 POINT matrixMultiply(float * matrix, POINT vector);
 float findSkewAngle(Image * img, POINT * origin);
 void rotateImage(Image * img, float theta, POINT origin);
 Square detectSearchBorder(Image * img);
 std::vector<Square> getCharacterLocations(Image * img, Square border);
+Color bilinearInterpolation(Pixel q1, Pixel q2, Pixel q3, Pixel q4, POINT x);

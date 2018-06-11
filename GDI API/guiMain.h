@@ -508,7 +508,7 @@ namespace gui {
 			dimensions = { x, y, width, height }; originalDims = dimensions;
 			selfHandle = true;
 			parent = window;
-			handle = CreateWindow("SCROLLBAR", NULL, WS_CHILD | WS_VISIBLE | params, x, y, width, height, window, NULL, NULL, NULL);
+//			handle = CreateWindow("SCROLLBAR", NULL, WS_CHILD | WS_VISIBLE | params, x, y, width, height, window, NULL, NULL, NULL);
 			this->controlType = type;
 			currentPos = 0;
 			GetClientRect(window, &wndDim);

@@ -220,6 +220,7 @@ int main(){
 	Progressbar * p = (Progressbar*)mainPage->getCurrentPage()->getControl("progress");
 	p->setMarquee(true);
 	p->hideComponent();
+#pragma region eventHandling
 	Scrollbar * scroll = (Scrollbar*)mainPage->getCurrentPage()->getControl("testScroll");
 	scroll->setScrollMessages([](int changePos) {
 		for (auto it = display.getCanvas()->getImages()->begin(); it != display.getCanvas()->getImages()->end(); it++) {
@@ -252,6 +253,7 @@ int main(){
 				float f = findSkewAngle(img, &origin);
 				printf("Angle: %f \n", f);
 				rotateImage(img, -f, origin);
+				detectSearchBorder(img);
 				Scrollbar * scroll = (Scrollbar*)mainPage->getCurrentPage()->getControl("testScroll");
 				scroll->update(max(img->getWidth() - display.getDimensions().width, 2));
 				scroll = (Scrollbar*)mainPage->getCurrentPage()->getControl("scrollVert");
@@ -308,6 +310,7 @@ int main(){
 	display.addEventListener(new EventListener([](EventParams ep) {
 		SetCursor(cursors[currentCursor]);
 	}, WM_SETCURSOR));
+#pragma endregion 
 	MSG msg;
 	while (true) {
 		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
