@@ -253,7 +253,7 @@ int main(){
 				float f = findSkewAngle(img, &origin);
 				printf("Angle: %f \n", f);
 				rotateImage(img, -f, origin);
-				detectSearchBorder(img);
+				getCharacterLocations(img);
 				Scrollbar * scroll = (Scrollbar*)mainPage->getCurrentPage()->getControl("testScroll");
 				scroll->update(max(img->getWidth() - display.getDimensions().width, 2));
 				scroll = (Scrollbar*)mainPage->getCurrentPage()->getControl("scrollVert");

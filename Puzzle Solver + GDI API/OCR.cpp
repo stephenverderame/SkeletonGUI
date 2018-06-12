@@ -124,7 +124,7 @@ float findSkewAngle(Image * img, POINT * origin) {
 	return angle;
 
 }
-Square detectSearchBorder(Image * img)
+std::vector<Square> getCharacterLocations(Image * img)
 {
 #pragma region columnSpaces
 	int * accumulator = new int[img->getWidth()];
@@ -170,7 +170,7 @@ Square detectSearchBorder(Image * img)
 		avgSpaceSize = (spaceSizes[spaceSizes.size() / 2] + spaceSizes[spaceSizes.size() / 2 + 1]) / 2;
 	}
 	printf("Median space size: %d \n", avgSpaceSize);
-	for (int i = 0; i < spaces.size(); i++) {
+	for (int i = 0; i < spaces.size(); i++) { //combining small spaces close together
 		int lastSpace = max(i - 1, 0);
 		if (spaces[i].size <= round(.2 * avgSpaceSize) && abs(spaces[i].start - (spaces[lastSpace].start + spaces[lastSpace].size)) <= round(.3 * avgSpaceSize)) {
 			spaces[lastSpace].size = spaces[i].start + spaces[i].size - spaces[lastSpace].start;
@@ -184,7 +184,7 @@ Square detectSearchBorder(Image * img)
 		int lastSpace = max(i - 1, 0);
 		Space s = spaces[i];
 		if (s.size == -1 || s.start == -1) continue;
-		if (abs(s.size - avgSpaceSize) <= round(.2 * avgSpaceSize)) {
+		if (abs(s.size - avgSpaceSize) <= round(.5 * avgSpaceSize)) {
 			if (equalSpacing.size != -1/* && abs(s.size - lastSpaceSize) < .1 * lastSpaceSize*/) {
 				equalSpacing.size = s.start + s.size - equalSpacing.start;
 				lastSpaceSize = s.size;
@@ -196,7 +196,7 @@ Square detectSearchBorder(Image * img)
 			}
 		}
 		else {
-			if (s.size - avgSpaceSize >= round(.5 * avgSpaceSize) && equalSpacing.size != -1) {
+			if (s.size - avgSpaceSize > round(.5 * avgSpaceSize) && equalSpacing.size != -1) {
 				equalSpacing.size = s.start - equalSpacing.start;
 				break;
 			}
@@ -255,6 +255,14 @@ Square detectSearchBorder(Image * img)
 			spaces[i] = { -1, -1 };
 		}
 	}
+/*	for (Space s : horzSpaces) {
+		printf("Horz Space Size: %d \n", s.size);
+		for (int i = 0; i < img->getWidth(); i++) {
+			for (int y = s.start; y < s.start + s.size; y++) {
+				img->setPixel(i, y, { 0, 0, 255 });
+			}
+		}
+	}*/
 	if (horzSpaces.size() == 0) printf("no spaces!");
 	lastSpaceSize = 0;
 	Space horzEqualSpacing{ -1, -1 };
@@ -262,7 +270,7 @@ Square detectSearchBorder(Image * img)
 		int lastSpace = max(i - 1, 0);
 		Space s = horzSpaces[i];
 		if (s.size == -1 || s.start == -1) continue;
-		if (abs(s.size - avgSpaceSize) <= round(.2 * avgSpaceSize)) {
+		if (abs(s.size - avgSpaceSize) <= round(.5 * avgSpaceSize)) {
 			if (horzEqualSpacing.size != -1/* && abs(s.size - lastSpaceSize) < .1 * lastSpaceSize*/) {
 				horzEqualSpacing.size = s.start + s.size - horzEqualSpacing.start;
 				lastSpaceSize = s.size;
@@ -274,7 +282,8 @@ Square detectSearchBorder(Image * img)
 			}
 		}
 		else {
-			if (s.size - avgSpaceSize >= round(.5 * avgSpaceSize) && horzEqualSpacing.size != -1) {
+			printf("Stopped bc %d size \n", s.size);
+			if (s.size - avgSpaceSize > round(.5 * avgSpaceSize) && horzEqualSpacing.size != -1) {
 				horzEqualSpacing.size = s.start - horzEqualSpacing.start;
 				break;
 			}
@@ -287,8 +296,30 @@ Square detectSearchBorder(Image * img)
 #pragma endregion
 	std::vector<Square> characters;
 	for (int x = 0; x < spaces.size(); x++) {
-		for(int y = 0; y < horzSpaces.size(); y++){
-
+		if (spaces[x].start + spaces[x].size >= equalSpacing.start && spaces[x].start <= equalSpacing.start + equalSpacing.size) {
+			for (int y = 0; y < horzSpaces.size(); y++) {
+				if (horzSpaces[y].start + horzSpaces[y].size >= horzEqualSpacing.start && horzSpaces[y].start <= horzEqualSpacing.start + horzEqualSpacing.size) {
+					Square sq;
+					int prevY = max(y - 1, 0);
+					int nextX = min(x + 1, spaces.size() - 1);
+					int nextY = min(y + 1, horzSpaces.size() - 1);
+					sq.x = spaces[x].start + spaces[x].size;
+					sq.y = horzSpaces[prevY].start + horzSpaces[prevY].size;
+					sq.width = spaces[nextX].start - (spaces[x].start + spaces[x].size);
+					sq.height = horzSpaces[nextY].start - (horzSpaces[y].start + horzSpaces[y].size);
+					characters.push_back(sq);
+				}
+			}
+		}
+	}
+	for (Square s : characters) {
+		for (int i = s.y; i < s.y + s.height; i++) {
+			img->setPixel(s.x, i, { 0, 255, 0 });
+			img->setPixel(s.x + s.width, i, { 0, 255, 0 });
+		}
+		for (int i = s.x; i < s.x + s.width; i++) {
+			img->setPixel(i, s.y, { 0, 255, 0 });
+			img->setPixel(i, s.y + s.height, { 0, 255, 0 });
 		}
 	}
 	RECT r;
@@ -296,7 +327,7 @@ Square detectSearchBorder(Image * img)
 	InvalidateRect(gui::GUI::useWindow(), &r, TRUE);
 	delete[] accumulator;
 	delete[] horzAccumulator;
-	return Square();
+	return characters;
 }
 #ifdef OLD_ROTATE
 void rotateImage(Image * img, float theta, POINT origin)
@@ -343,6 +374,7 @@ void rotateImage(Image * img, float theta, POINT origin)
 		buffer[i] = Color{ 255, 255, 255 };
 	}
 	//end debugging
+	//mapping from destination back to source and picks out source pixel to reduce the "holes" in the image
 	float rotationMatrix[] = {
 		cos(radians(-theta)),  -sin(radians(-theta)),
 		sin(radians(-theta)),  cos(radians(-theta))
@@ -412,10 +444,6 @@ void rotateImage(Image * img, float theta, POINT origin)
 	delete[] buffer;
 }
 #endif
-std::vector<Square> getCharacterLocations(Image * img, Square border)
-{
-	std::vector<Square> list;
-}
 Color bilinearInterpolation(Pixel q1, Pixel q2, Pixel q3, Pixel q4, POINT x)
 {
 	Color c;
