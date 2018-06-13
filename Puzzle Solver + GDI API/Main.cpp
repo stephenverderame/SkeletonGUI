@@ -10,6 +10,7 @@
 #include <time.h>
 #include "Grid.h"
 #include "OCR.h"
+#include <guiMainEx.h>
 using namespace gui;
 MainPage * mainPage;
 Image * img;
@@ -206,11 +207,12 @@ int main(){
 	display.setWindowProperty(menuName, update);
 	display.setWindowProperty(icon, update);
 	display.createWindow(300, 300, 800, 800);
-	GUI::bindWindow(display);
+	GUI::bindWindow(display); 
+	int sections[] = { 100, -1 };
 	Page * p1 = new Page("Page 1", {
 		new Scrollbar("testScroll", 10, display.getDimensions().height - 20, display.getDimensions().width - 20, 10, 100, scrollHorz, SBS_HORZ),
 		new Scrollbar("scrollVert", display.getDimensions().width - 10, 0, 10, display.getDimensions().height, 100, scrollVert, SBS_VERT),
-		new Progressbar("progress", 10, display.getDimensions().height - 20, display.getDimensions().width - 20, 20, 0, 100)
+		new Progressbar("progress", 10, display.getDimensions().height - 20, display.getDimensions().width - 20, 20, 0, 100),
 	});
 	p1->setLayout(new AbsoluteLayout());
 	mainPage = new MainPage({
@@ -253,7 +255,8 @@ int main(){
 				float f = findSkewAngle(img, &origin);
 				printf("Angle: %f \n", f);
 				rotateImage(img, -f, origin);
-				getCharacterLocations(img);
+				auto list = getCharacterLocations(img);
+				identifyLetters(img, list);
 				Scrollbar * scroll = (Scrollbar*)mainPage->getCurrentPage()->getControl("testScroll");
 				scroll->update(max(img->getWidth() - display.getDimensions().width, 2));
 				scroll = (Scrollbar*)mainPage->getCurrentPage()->getControl("scrollVert");
@@ -310,7 +313,7 @@ int main(){
 	display.addEventListener(new EventListener([](EventParams ep) {
 		SetCursor(cursors[currentCursor]);
 	}, WM_SETCURSOR));
-#pragma endregion 
+#pragma endregion
 	MSG msg;
 	while (true) {
 		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {

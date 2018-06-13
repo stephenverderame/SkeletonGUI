@@ -119,7 +119,9 @@
     <ClInclude Include="glad.h" />
     <ClInclude Include="glWindow.h" />
     <ClInclude Include="guiMain.h" />
+    <ClInclude Include="guiMainEx.h" />
     <ClInclude Include="GUIS.h" />
+    <ClInclude Include="Image.h" />
     <ClInclude Include="khrplatform.h" />
     <ClInclude Include="Layout.h" />
     <ClInclude Include="linkedList.h" />
@@ -135,7 +137,9 @@
     <ClCompile Include="glad.c" />
     <ClCompile Include="glWindow.cpp" />
     <ClCompile Include="guiMain.cpp" />
+    <ClCompile Include="guiMainEx.cpp" />
     <ClCompile Include="GUIS.cpp" />
+    <ClCompile Include="Image.cpp" />
     <ClCompile Include="layout.cpp" />
     <ClCompile Include="Page.cpp" />
     <ClCompile Include="window.cpp" />

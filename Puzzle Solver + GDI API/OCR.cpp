@@ -262,6 +262,13 @@ std::vector<Square> getCharacterLocations(Image * img)
 				img->setPixel(i, y, { 0, 0, 255 });
 			}
 		}
+	}
+	for (Space s : spaces) {
+		for (int i = 0; i < img->getHeight(); i++) {
+			for (int x = s.start; x < s.start + s.size; x++) {
+				img->setPixel(x, i, { 0, 0, 255 });
+			}
+		}
 	}*/
 	if (horzSpaces.size() == 0) printf("no spaces!");
 	lastSpaceSize = 0;
@@ -304,7 +311,7 @@ std::vector<Square> getCharacterLocations(Image * img)
 					int nextX = min(x + 1, spaces.size() - 1);
 					int nextY = min(y + 1, horzSpaces.size() - 1);
 					sq.x = spaces[x].start + spaces[x].size;
-					sq.y = horzSpaces[prevY].start + horzSpaces[prevY].size;
+					sq.y = horzSpaces[y].start + horzSpaces[y].size;
 					sq.width = spaces[nextX].start - (spaces[x].start + spaces[x].size);
 					sq.height = horzSpaces[nextY].start - (horzSpaces[y].start + horzSpaces[y].size);
 					characters.push_back(sq);
@@ -329,6 +336,40 @@ std::vector<Square> getCharacterLocations(Image * img)
 	delete[] horzAccumulator;
 	return characters;
 }
+char * identifyLetters(Image * img, std::vector<Square> locations)
+{
+/*	char * characterMap = new char[locations.size()];
+	Image ** letters = new Image *[26];
+	for (int i = ID_A; i < ID_ALPHA_MAX; i++) {
+		gui::Resource res = gui::GUI::loadResource(i, LETTER);
+		letters[i - ID_A] = new Image(res);
+	}
+	for (int i = 0; i < locations.size(); i++) {
+		std::pair<int, int> minDifference = std::make_pair(0, INT_MAX);
+		Image * letter = Image::newImgFrom(img, locations[i].x, locations[i].y, locations[i].width, locations[i].height);
+		letter->scaleTo(5, 5);
+		for (int j = 0; j < 26; j++) {
+			if (abs(letter->integralImageValue(4, 4) - letters[j]->integralImageValue(4, 4)) < minDifference.second) {
+				minDifference.first = j;
+				minDifference.second = abs(letter->integralImageValue(4, 4) - letters[j]->integralImageValue(4, 4));
+			}
+		}
+		characterMap[i] = minDifference.first + 65; //65 is A in ASCII
+		delete letter;
+	}
+	for (int i = ID_A; i < ID_ALPHA_MAX; i++)
+		delete letters[i - ID_A];
+	delete[] letters;
+	return characterMap;*/
+	//Testing...
+	Image * letter = Image::newImgFrom(img, locations[1].x, locations[1].y, locations[1].width, locations[1].height);
+//	letter->scaleTo(5, 5);
+	letter->saveBmp("letterScaled.bmp");
+//	delete letter;
+	return nullptr;
+
+	//end testing
+ }
 #ifdef OLD_ROTATE
 void rotateImage(Image * img, float theta, POINT origin)
 {
