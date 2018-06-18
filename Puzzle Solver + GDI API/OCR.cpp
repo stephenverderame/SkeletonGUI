@@ -204,8 +204,8 @@ std::vector<Square> getCharacterLocations(Image * img)
 	}
 	printf("Equal spacing from: %d to %d \n", equalSpacing.start, equalSpacing.start + equalSpacing.size);
 	for (int i = 0; i < img->getHeight(); i++) {
-		img->setPixel(equalSpacing.start, i, { 255, 0, 0 });
-		img->setPixel(equalSpacing.start + equalSpacing.size, i, { 255, 0, 0 });
+//		img->setPixel(equalSpacing.start, i, { 255, 0, 0 });
+//		img->setPixel(equalSpacing.start + equalSpacing.size, i, { 255, 0, 0 });
 	}
 #pragma endregion
 #pragma region horzSpacing
@@ -297,8 +297,8 @@ std::vector<Square> getCharacterLocations(Image * img)
 		}
 	}
 	for (int i = 0; i < img->getWidth(); i++) {
-		img->setPixel(i, horzEqualSpacing.start, { 255, 0, 0 });
-		img->setPixel(i, horzEqualSpacing.start + horzEqualSpacing.size, { 255, 0, 0 });
+//		img->setPixel(i, horzEqualSpacing.start, { 255, 0, 0 });
+//		img->setPixel(i, horzEqualSpacing.start + horzEqualSpacing.size, { 255, 0, 0 });
 	}
 #pragma endregion
 	std::vector<Square> characters;
@@ -319,7 +319,7 @@ std::vector<Square> getCharacterLocations(Image * img)
 			}
 		}
 	}
-	for (Square s : characters) {
+/*	for (Square s : characters) {
 		for (int i = s.y; i < s.y + s.height; i++) {
 			img->setPixel(s.x, i, { 0, 255, 0 });
 			img->setPixel(s.x + s.width, i, { 0, 255, 0 });
@@ -328,7 +328,7 @@ std::vector<Square> getCharacterLocations(Image * img)
 			img->setPixel(i, s.y, { 0, 255, 0 });
 			img->setPixel(i, s.y + s.height, { 0, 255, 0 });
 		}
-	}
+	}*/
 	RECT r;
 	GetClientRect(gui::GUI::useWindow(), &r);
 	InvalidateRect(gui::GUI::useWindow(), &r, TRUE);
@@ -362,9 +362,18 @@ char * identifyLetters(Image * img, std::vector<Square> locations)
 	delete[] letters;
 	return characterMap;*/
 	//Testing...
-	Image * letter = Image::newImgFrom(img, locations[1].x, locations[1].y, locations[1].width, locations[1].height);
-//	letter->scaleTo(5, 5);
-	letter->saveBmp("letterScaled.bmp");
+	Image * letter = new Image("white.bmp");
+	letter->resize(locations[20].width, locations[20].height);
+	printf("Width: %d Height %d \n", locations[20].width, locations[20].height);
+	for (int x = 0; x < locations[20].width; x++) {
+		for (int y = 0; y < locations[20].height; y++) {
+			letter->setPixel(x, y, img->getPixel(x + locations[20].x, y + locations[20].y));
+		}
+	}
+//	letter->resize(5, 5);
+	letter->scaleTo(5, 5);
+//	letter->toMonochrome();
+	letter->saveBmp("letterSmallTest.bmp");
 //	delete letter;
 	return nullptr;
 

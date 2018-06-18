@@ -1,5 +1,6 @@
 #pragma once
 #include "GUIS.h" 
+#include <vector>
 typedef unsigned char channel;
 struct Color {
 	channel r;
@@ -54,3 +55,4 @@ public:
 	void scaleTo(int width, int height);
 	int getScanline() { return scanline; }
 };
+Color biLerp(POINT * points, Image * source, POINT p);
