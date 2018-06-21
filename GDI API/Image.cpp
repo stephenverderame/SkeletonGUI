@@ -67,8 +67,10 @@ Image::Image(const char * file, HWND window) : rawUpdated(false)
 		convertToBitmap(file);
 		bmp = (HBITMAP)LoadImage(NULL, "temp.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE | LR_CREATEDIBSECTION);
 	}
-	else
+	else {
 		bmp = (HBITMAP)LoadImage(NULL, file, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE | LR_CREATEDIBSECTION);
+		if (bmp == NULL) printf("BMP failed to load %s \n", file);
+	}
 	this->parent = window;
 	BITMAP bm;
 	ZeroMemory(&bm, sizeof(bm));
@@ -82,27 +84,10 @@ Image::Image(const char * file, HWND window) : rawUpdated(false)
 
 }
 
-Image::Image(const char * file, int x, int y, HWND window) : rawUpdated(false)
+Image::Image(const char * file, int x, int y, HWND window) : Image(file, window)
 {
-	int size = strlen(file);
-	if (file[size - 4] != '.' || file[size - 3] != 'b' || file[size - 2] != 'm' || file[size - 1] != 'p') {
-		convertToBitmap(file);
-		bmp = (HBITMAP)LoadImage(NULL, "temp.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE | LR_CREATEDIBSECTION);
-	}
-	else
-		bmp = (HBITMAP)LoadImage(NULL, file, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE | LR_CREATEDIBSECTION);
-	this->parent = window;
 	this->x = x;
 	this->y = y;
-	BITMAP bm;
-	ZeroMemory(&bm, sizeof(bm));
-	GetObject(bmp, sizeof(bm), &bm);
-	rawData = (channel*)bm.bmBits;
-	scanline = bm.bmWidthBytes;
-	width = bm.bmWidth;
-	height = bm.bmHeight;
-	forcedWidth = width;
-	forcedHeight = height;
 }
 
 Image::Image(gui::Resource res, HWND window)
@@ -123,6 +108,7 @@ Image::Image(gui::Resource res, HWND window)
 	if (bmp == NULL) printf("Create DIB section failed %d \n", GetLastError());
 	if (SetDIBits(dc, bmp, 0, infoHeader.biHeight, res.data + sizeof(BITMAPINFOHEADER) + sizeof(BITMAPFILEHEADER), &bmi, DIB_RGB_COLORS) == 0) printf("Set Dibits failed %d \n", GetLastError());
 	if (GetDIBits(dc, bmp, 0, infoHeader.biHeight, &rawData, &bmi, DIB_RGB_COLORS) == 0) printf("Get DIbits failed %d \n", GetLastError());
+	ReleaseDC(gui::GUI::useWindow(), dc);
 }
 
 Image::Image(int width, int height, int x, int y, HWND window) : width(width), height(height), x(x), y(y)

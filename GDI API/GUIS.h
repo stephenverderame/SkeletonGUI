@@ -9,7 +9,7 @@ namespace gui {
 	struct Resource {
 		char * data;
 		int size;
-		~Resource() { delete[] data; }
+		~Resource() { /*delete[] data;*/ }
 	};
 	class GUI {
 	private:

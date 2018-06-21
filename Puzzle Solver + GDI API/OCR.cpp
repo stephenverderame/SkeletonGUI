@@ -314,6 +314,7 @@ std::vector<Square> getCharacterLocations(Image * img)
 					sq.y = horzSpaces[y].start + horzSpaces[y].size;
 					sq.width = spaces[nextX].start - (spaces[x].start + spaces[x].size);
 					sq.height = horzSpaces[nextY].start - (horzSpaces[y].start + horzSpaces[y].size);
+					if (sq.width < 3 || sq.height < 3) continue;
 					characters.push_back(sq);
 				}
 			}
@@ -338,31 +339,55 @@ std::vector<Square> getCharacterLocations(Image * img)
 }
 char * identifyLetters(Image * img, std::vector<Square> locations)
 {
-/*	char * characterMap = new char[locations.size()];
-	Image ** letters = new Image *[26];
-	for (int i = ID_A; i < ID_ALPHA_MAX; i++) {
-		gui::Resource res = gui::GUI::loadResource(i, LETTER);
-		letters[i - ID_A] = new Image(res);
+	char * characterMap = new char[locations.size()];
+	SearchGrid grid;
+	std::vector<Image *> letters;
+	for (int i = 0; i < 26; i++) {
+//		gui::Resource res = gui::GUI::loadResource(i, LETTER);
+		std::stringstream ss;
+		ss << "letters\\" << (char)(i + 65) << ".bmp";
+		Image * letterImage = new Image(ss.str().c_str());
+//		letterImage->saveBmp("testKnown.bmp"); //this isnt working
+		letters.push_back(letterImage);
+//		printf("I: %d \n", i);
 	}
 	for (int i = 0; i < locations.size(); i++) {
 		std::pair<int, int> minDifference = std::make_pair(0, INT_MAX);
-		Image * letter = Image::newImgFrom(img, locations[i].x, locations[i].y, locations[i].width, locations[i].height);
+		Image * letter = new Image("white.bmp");
+		letter->resize(locations[i].width, locations[i].height);
+		for (int x = 0; x < locations[i].width; x++) {
+			for (int y = 0; y < locations[i].height; y++) {
+				letter->setPixel(x, y, img->getPixel(x + locations[i].x, y + locations[i].y));
+			}
+		}
 		letter->scaleTo(5, 5);
+//		if (i == 1) letter->saveBmp("testUnknown.bmp");
+		CharacterFeatures score = getImageScore(letter);
+		if (i == 1) {
+			letter->saveBmp("testUnknown.bmp");
+			printf("Elbow1: %d Elbow2: %d Dash: %d V: %d \n", score.elbow1, score.elbow2, score.dash, score.v);
+		}
 		for (int j = 0; j < 26; j++) {
-			if (abs(letter->integralImageValue(4, 4) - letters[j]->integralImageValue(4, 4)) < minDifference.second) {
+			int diffScore = 0;		
+			CharacterFeatures cmpScore = getImageScore(letters[j]);
+			diffScore += abs(score.elbow1 - cmpScore.elbow1) + abs(score.elbow2 - cmpScore.elbow2) + abs(score.dash - cmpScore.dash) + abs(score.v - cmpScore.v);
+//			diffScore += abs(letter->integralImageValue(4, 4) - letters[j]->integralImageValue(4, 4));
+			if (diffScore < minDifference.second) {
 				minDifference.first = j;
-				minDifference.second = abs(letter->integralImageValue(4, 4) - letters[j]->integralImageValue(4, 4));
+				minDifference.second = diffScore;
 			}
 		}
 		characterMap[i] = minDifference.first + 65; //65 is A in ASCII
+		grid.addLetter(minDifference.first + 65, locations[i].x, locations[i].y);
 		delete letter;
 	}
-	for (int i = ID_A; i < ID_ALPHA_MAX; i++)
-		delete letters[i - ID_A];
-	delete[] letters;
-	return characterMap;*/
+	for (int i = 0; i < 26; i++)
+		delete letters[i];
+//	printf("%s \n", characterMap);
+	grid.iterateRowbyRow();
+	return characterMap;
 	//Testing...
-	Image * letter = new Image("white.bmp");
+/*	Image * letter = new Image("white.bmp");
 	letter->resize(locations[20].width, locations[20].height);
 	printf("Width: %d Height %d \n", locations[20].width, locations[20].height);
 	for (int x = 0; x < locations[20].width; x++) {
@@ -377,7 +402,7 @@ char * identifyLetters(Image * img, std::vector<Square> locations)
 //	delete letter;
 	return nullptr;
 
-	//end testing
+	//end testing*/
  }
 #ifdef OLD_ROTATE
 void rotateImage(Image * img, float theta, POINT origin)
@@ -511,7 +536,110 @@ Color bilinearInterpolation(Pixel q1, Pixel q2, Pixel q3, Pixel q4, POINT x)
 	c.b = ((y2 - x.y) / (y2 - y1)) * r1 + ((x.y - y1) / (y2 - y1)) * r2;
 	return c;
 }
+#define THRESHOLD 200
+CharacterFeatures getImageScore(Image * img)
+{
+	int score = 0;
+	char elbow1 = 0;
+	char elbow2 = 0;
+	char dash = 0;
+	char v = 0;
+	for (int i = 0; i < img->getHeight() * img->getWidth(); i++) {
+		int x = i % img->getWidth();
+		int y = i / img->getWidth();
+		for (int j = -1; j <= 1; j++) {
+			if (j == 0) continue;
+			if (y + j > 0 && y + j < img->getHeight() && x - j < img->getWidth() && x - j > 0)
+				elbow1 += img->getPixel(x, y).avg() < THRESHOLD ? (img->getPixel(x - j, y).avg() < THRESHOLD ? (img->getPixel(x, y + j).avg() < THRESHOLD ? (img->getPixel(x - j, y +j).avg() > THRESHOLD ? 1 : 0) : 0) : 0) : 0;
+			if (y - j > 0 && y - j < img->getHeight() && x + j > 0 && x + j < img->getWidth())
+				elbow2 += img->getPixel(x, y).avg() < THRESHOLD ? (img->getPixel(x + j, y).avg() < THRESHOLD ? (img->getPixel(x, y + j).avg() < THRESHOLD ? (img->getPixel(x + j, y + j).avg() > THRESHOLD ? 1 : 0) : 0) : 0) : 0;
+			if (y + j > 0 && y + j < img->getHeight() && x + j > 0 && x + j < img->getHeight())
+				dash += img->getPixel(x, y).avg() < THRESHOLD ? (img->getPixel(x + j, y + j).avg() < THRESHOLD ? (img->getPixel(x - j, y - j).avg() < THRESHOLD ? 1 : 0) : 0) : 0;
+			if (y + j > 0 && y + j < img->getHeight() && x + 1 < img->getWidth() && x - 1 > 0)
+				v += img->getPixel(x, y).avg() < THRESHOLD ? (img->getPixel(x + 1, y + j).avg() < THRESHOLD ? (img->getPixel(x - 1, y + j).avg() < THRESHOLD ? 1 : 0) : 0) : 0;
+
+		}
+
+		
+	}
+	return CharacterFeatures{elbow1, elbow2, dash, v};
+}
 Rect::operator Square()
 {
 	return{ topLeft.x, topLeft.y, bottomRight.x - topLeft.x, bottomRight.y - topLeft.y };
+}
+
+void SearchGrid::addLetter(char c, int x, int y)
+{
+	if (letters.size() < 1) {
+		row0Y = y;
+		column0X = x;
+		lastRow = std::make_pair(0, y);
+		lastColumn = std::make_pair(0, x);
+		letters.push_back(new Letter{ 0, 0, c });
+	}
+	else {
+		int currentRow;
+		int currentColumn;
+		if (abs(lastRow.second - y) < 5)
+			currentRow = lastRow.first;
+		else if (y > lastRow.second) {
+			//this row is further down
+			lastRow = std::make_pair(lastRow.first + 1, y);
+			currentRow = lastRow.first;
+			maxRows = max(maxRows, currentRow);
+		}
+		else if (y < lastRow.second) {
+			if (abs(row0Y - y) < 5) {
+				lastRow = std::make_pair(0, row0Y);
+				currentRow = 0;
+//				printf("Row reset \n");
+			}
+			else
+				printf("IDK how to handle this row \n");
+		}
+
+		if (abs(lastColumn.second - x) < 5) {
+			currentColumn = lastColumn.first;
+//			printf("Current column \n");
+		}
+		else if (x > lastColumn.second) {
+			lastColumn = std::make_pair(lastColumn.first + 1, x);
+			currentColumn = lastColumn.first;
+			maxColumns = max(maxColumns, currentColumn);
+//			printf("Column greater: %d \n", currentColumn);
+		}
+		else if (x < lastColumn.second) {
+			if (abs(x - column0X) < 5) {
+				lastColumn = std::make_pair(0, column0X);
+				currentColumn = 0;
+//				printf("Column reset \n");
+			}
+			else
+				printf("IDK column \n");
+		}
+//		printf("%d %d \n", currentRow, currentColumn);
+		letters.push_back(new Letter{ currentRow, currentColumn, c });
+	}
+}
+
+SearchGrid::~SearchGrid()
+{
+	for (int i = 0; i < letters.size(); i++) {
+		delete letters[i];
+	}
+}
+
+void SearchGrid::iterateRowbyRow()
+{
+	printf("Max rows: %d   Max columns: %d \n", maxRows, maxColumns);
+	for (int r = 0; r <= maxRows; r++) {
+		for (int c = 0; c <= maxColumns; c++) {
+			for (Letter * l : letters) {
+				if (l->row == r && l->column == c)
+					printf("%c ", l->letter);
+			}
+		}
+		printf("\n");
+	}
 }
