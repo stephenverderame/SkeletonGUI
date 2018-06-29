@@ -505,6 +505,29 @@ void Image::scaleTo(int width, int height)
 	delete originalData;*/
 }
 
+Image * Image::scale(int width, int height)
+{
+	Image * img = new Image(width, height);
+	for (int i = 0; i < width * height; i++) {
+		int x = i % width;
+		int y = i / width;
+		float gx = x / (float)width * (this->width - 1);
+		float gy = y / (float)height * (this->height - 1);
+		int gxi = gx;
+		int gyi = gy;
+		Color result;
+		Color c00 = getPixel(gxi, gyi);
+		Color c10 = getPixel(gxi + 1, gyi);
+		Color c01 = getPixel(gxi, gyi + 1);
+		Color c11 = getPixel(gxi + 1, gyi + 1);
+		result.r = (channel)blerp(c00.r, c10.r, c01.r, c11.r, gx - gxi, gy - gyi);
+		result.g = (channel)blerp(c00.g, c10.g, c01.g, c11.g, gx - gxi, gy - gyi);
+		result.b = (channel)blerp(c00.b, c10.b, c01.b, c11.b, gx - gxi, gy - gyi);
+		img->setPixel(x, y, result);
+	}
+	return img;
+}
+
 Color biLerp(POINT * points, Image * source, POINT p)
 {
 	Color pColor;

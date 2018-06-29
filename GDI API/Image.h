@@ -25,6 +25,8 @@ private:
 	int * integralImage;
 private:
 	void convertToBitmap(const char * fileName);
+	float lerp(float s, float e, float t) { return s + (e - s)*t; }
+	float blerp(float c00, float c10, float c01, float c11, float tx, float ty) { return lerp(lerp(c00, c10, tx), lerp(c01, c11, tx), ty); }
 public:
 	static Image * newImgFrom(Image * img, int x, int y, int width, int height);
 public:
@@ -32,6 +34,7 @@ public:
 	Image(const char * file, int x, int y, HWND window = gui::GUI::useWindow());
 	Image(gui::Resource res, HWND window = gui::GUI::useWindow());
 	Image(int width, int height, int x, int y, HWND window = gui::GUI::useWindow());
+	Image(int width, int height) : Image(width, height, 0, 0, gui::GUI::useWindow()) {};
 	Image();
 	~Image();
 	bool setPixel(int x, int y, Color c);
@@ -53,6 +56,20 @@ public:
 	int integralImageValue(int x, int y);
 	void resize(int width, int height); //simply resizes the buffer, nothing more
 	void scaleTo(int width, int height);
+	Image * scale(int width, int height);
 	int getScanline() { return scanline; }
+	void clearBmp(channel c) { memset(rawData, c, scanline * height); rawUpdated = true; }
+};
+class ImgPtr {
+private:
+	Image * img;
+public:
+	Image * operator->() { return img; }
+	ImgPtr & operator=(Image * i) { img = i; return *this; }
+	bool operator==(Image * i) { return i == img; }
+	bool operator==(ImgPtr i) { return i.img == img; }
+	~ImgPtr() { delete img; }
+	ImgPtr(Image * img) : img(img) {};
+	ImgPtr() : img(nullptr) {};
 };
 Color biLerp(POINT * points, Image * source, POINT p);

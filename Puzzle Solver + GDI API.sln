@@ -5,7 +5,9 @@ VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Puzzle Solver", "Puzzle Solver + GDI API\Puzzle Solver + GDI API.vcxproj", "{0A4E7A0F-D3D2-4953-80BF-BDC01B66E8E3}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GDI API", "GDI API\GDI API.vcxproj", "{C069AB6C-CB1D-494F-B6EF-AB8264643AFA}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "GUI API", "GDI API\GDI API.vcxproj", "{C069AB6C-CB1D-494F-B6EF-AB8264643AFA}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "HelperProgram", "HelperProgram\HelperProgram.vcxproj", "{078DAA67-FA3C-4F2D-B975-4C69A85BB673}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -31,6 +33,14 @@ Global
 		{C069AB6C-CB1D-494F-B6EF-AB8264643AFA}.Release|x64.Build.0 = Release|x64
 		{C069AB6C-CB1D-494F-B6EF-AB8264643AFA}.Release|x86.ActiveCfg = Release|Win32
 		{C069AB6C-CB1D-494F-B6EF-AB8264643AFA}.Release|x86.Build.0 = Release|Win32
+		{078DAA67-FA3C-4F2D-B975-4C69A85BB673}.Debug|x64.ActiveCfg = Debug|x64
+		{078DAA67-FA3C-4F2D-B975-4C69A85BB673}.Debug|x64.Build.0 = Debug|x64
+		{078DAA67-FA3C-4F2D-B975-4C69A85BB673}.Debug|x86.ActiveCfg = Debug|Win32
+		{078DAA67-FA3C-4F2D-B975-4C69A85BB673}.Debug|x86.Build.0 = Debug|Win32
+		{078DAA67-FA3C-4F2D-B975-4C69A85BB673}.Release|x64.ActiveCfg = Release|x64
+		{078DAA67-FA3C-4F2D-B975-4C69A85BB673}.Release|x64.Build.0 = Release|x64
+		{078DAA67-FA3C-4F2D-B975-4C69A85BB673}.Release|x86.ActiveCfg = Release|Win32
+		{078DAA67-FA3C-4F2D-B975-4C69A85BB673}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

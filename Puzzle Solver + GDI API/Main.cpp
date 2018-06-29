@@ -254,8 +254,11 @@ int main(){
 				POINT origin = { 0, 0 };
 				float f = findSkewAngle(img, &origin);
 				printf("Angle: %f \n", f);
-				rotateImage(img, -f, origin);
+//				rotateImage(img, -f, origin);
 				auto list = getCharacterLocations(img);
+//				augmentDataSet(list, {'T', 'N', 'E', 'R', 'R', 'U', 'C', 'M', 'M', 'A', 'G', 'N', 'E', 'T', 'I', 'S', 'M', 'P'}, img);
+//				augmentDataSet(list, { 'D', 'N', 'T', 'I', 'G', 'C', 'A', 'J', 'C', 'A', 'O', 'J', 'O', 'H', 'S', 'I', 'E', 'I', 'B', 'A' }, img);
+//				augmentDataSet(list, { 'H', 'M', 'E', 'G', 'Q', 'T', 'Z', 'M', 'R', 'H', 'Y', 'L', 'S', 'R' }, img);
 				identifyLetters(img, list);
 				Scrollbar * scroll = (Scrollbar*)mainPage->getCurrentPage()->getControl("testScroll");
 				scroll->update(max(img->getWidth() - display.getDimensions().width, 2));

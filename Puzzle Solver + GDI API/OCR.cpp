@@ -5,7 +5,7 @@ POINT matrixMultiply(float * matrix, POINT vector) {
 	result.y = matrix[2] * vector.x + matrix[3] * vector.y;
 	return result;
 }
-float findSkewAngle(Image * img, POINT * origin) {
+float findSkewAngle(Image * img, POINT * origin, Bounds * skewBounds) {
 	int startY = 0;
 	int startX = 0;
 	int totalAvg = img->integralImageValue(img->getWidth() - 1, img->getHeight() - 1) - img->integralImageValue(0, img->getHeight() - 1) - img->integralImageValue(img->getWidth() - 1, 0) + img->integralImageValue(0, 0);
@@ -20,6 +20,14 @@ float findSkewAngle(Image * img, POINT * origin) {
 			int yp = min(y + (.15 * img->getHeight()), img->getHeight() - 1);
 			int xm = max(x - (.15 * img->getWidth()), 0);
 			int ym = max(y - (.15 * img->getHeight()), 0);
+			if (xp != (int)(x + (.15 * img->getWidth())))
+				xm -= (x + .15 * img->getWidth()) - (img->getWidth() - 1);
+			else if (xm != (int)(x - (.15 * img->getWidth())))
+				xp += 0 - (x - .15 * img->getWidth());
+			if (yp != (int)(y + .15 * img->getHeight()))
+				ym -= (y + .15 * img->getHeight()) - (img->getHeight() - 1);
+			else if (ym != (int)(y - .15 * img->getHeight()))
+				yp += 0 - (y - .15 * img->getHeight());
 			int avg = img->integralImageValue(xp, yp) - img->integralImageValue(xm, yp) - img->integralImageValue(xp, ym) - img->integralImageValue(xm, ym);
 			printf("Avg: %d \n", avg);
 			avg /= (xp - xm) * (yp - ym);
@@ -27,7 +35,7 @@ float findSkewAngle(Image * img, POINT * origin) {
 			if (avg < totalAvg) {
 				printf("Area avg: %d \n", avg);
 				printf("Start (%d,%d) \n", x, y);
-				startY = y + 7; //puts point in the middle of most letters
+				startY = y;// +7; //puts point in the middle of most letters
 				startX = x;
 				break;
 			}
@@ -59,6 +67,8 @@ float findSkewAngle(Image * img, POINT * origin) {
 	int maxPixels = INT_MIN;
 	int indexMax = 0;
 	for (int i = 0; i < 360; i++) {
+		if(skewBounds != NULL)
+			if (i < floor(skewBounds->min) || i > ceil(skewBounds->max)) continue;
 		int old = maxPixels;
 		maxPixels = max(maxPixels, accumulator[i]);
 		if (old != maxPixels) indexMax = i;
@@ -91,7 +101,7 @@ float findSkewAngle(Image * img, POINT * origin) {
 #pragma endregion
 	float angle = indexMax + ((indexMaxMinor - 5) / 10.0);
 	//Testing
-	for (int i = 0; i < diagnol; i++) {
+/*	for (int i = 0; i < diagnol; i++) {
 		float theta = angle;
 		float rotationMatrix[] = {
 			cos(radians(theta)), -sin(radians(theta)),
@@ -102,9 +112,9 @@ float findSkewAngle(Image * img, POINT * origin) {
 		drawPoint.x += startX;
 		drawPoint.y += startY;
 		if (drawPoint.x > 0 && drawPoint.x < img->getWidth() && drawPoint.y > 0 && drawPoint.y < img->getHeight()) {
-			img->setPixel(drawPoint.x, drawPoint.y, Color{ 255, 0, 0 });
+			img->setPixel(drawPoint.x, drawPoint.y, Color{ 0, 0, 255 });
 		}
-	}
+	}*/
 //	img->setPixel(startX, startY, Color{ 0, 255, 0 });
 	RECT r;
 	GetClientRect(gui::GUI::useWindow(), &r);
@@ -202,11 +212,11 @@ std::vector<Square> getCharacterLocations(Image * img)
 			}
 		}
 	}
-	printf("Equal spacing from: %d to %d \n", equalSpacing.start, equalSpacing.start + equalSpacing.size);
+/*	printf("Equal spacing from: %d to %d \n", equalSpacing.start, equalSpacing.start + equalSpacing.size);
 	for (int i = 0; i < img->getHeight(); i++) {
-//		img->setPixel(equalSpacing.start, i, { 255, 0, 0 });
-//		img->setPixel(equalSpacing.start + equalSpacing.size, i, { 255, 0, 0 });
-	}
+		img->setPixel(equalSpacing.start, i, { 255, 0, 0 });
+		img->setPixel(equalSpacing.start + equalSpacing.size, i, { 255, 0, 0 });
+	}*/
 #pragma endregion
 #pragma region horzSpacing
 	int * horzAccumulator = new int[img->getHeight()];
@@ -263,7 +273,7 @@ std::vector<Square> getCharacterLocations(Image * img)
 			}
 		}
 	}
-	for (Space s : spaces) {
+/*	for (Space s : spaces) {
 		for (int i = 0; i < img->getHeight(); i++) {
 			for (int x = s.start; x < s.start + s.size; x++) {
 				img->setPixel(x, i, { 0, 0, 255 });
@@ -296,10 +306,10 @@ std::vector<Square> getCharacterLocations(Image * img)
 			}
 		}
 	}
-	for (int i = 0; i < img->getWidth(); i++) {
-//		img->setPixel(i, horzEqualSpacing.start, { 255, 0, 0 });
-//		img->setPixel(i, horzEqualSpacing.start + horzEqualSpacing.size, { 255, 0, 0 });
-	}
+/*	for (int i = 0; i < img->getWidth(); i++) {
+		img->setPixel(i, horzEqualSpacing.start, { 255, 0, 0 });
+		img->setPixel(i, horzEqualSpacing.start + horzEqualSpacing.size, { 255, 0, 0 });
+	}*/
 #pragma endregion
 	std::vector<Square> characters;
 	for (int x = 0; x < spaces.size(); x++) {
@@ -315,6 +325,50 @@ std::vector<Square> getCharacterLocations(Image * img)
 					sq.width = spaces[nextX].start - (spaces[x].start + spaces[x].size);
 					sq.height = horzSpaces[nextY].start - (horzSpaces[y].start + horzSpaces[y].size);
 					if (sq.width < 3 || sq.height < 3) continue;
+					if (sq.y > horzEqualSpacing.start + horzEqualSpacing.size) continue;
+					if (sq.x > equalSpacing.start + equalSpacing.size) continue;
+					int upY = sq.y;
+					int downY = sq.y + sq.height;
+					int leftX = sq.x;
+					int rightX = sq.x + sq.width;
+					bool done[4] = { false, false, false, false };
+					while (!(done[0] && done[1] && done[2] && done[3])) {
+						int upAcc = 0, downAcc = 0;
+						for (int i = -1; i < sq.width + 1; i++) {
+							upAcc += img->getPixel(sq.x + i, upY).avg() < 180 ? 1 : 0;
+							downAcc += img->getPixel(sq.x + i, downY).avg() < 180 ? 1 : 0;
+						}
+						if (upAcc > 1 && upY <= sq.y) upY--;
+//						else if (upY >= sq.y && upAcc <= 1) upY++;
+						else done[0] = true;
+						if (downAcc > 1 && downY >= sq.y + sq.height) downY++;
+//						else if (downY <= sq.y + sq.height && downAcc <= 1) downY--;
+						else done[1] = true;
+
+						int leftAcc = 0, rightAcc = 0;
+						for (int i = -1; i < sq.height + 1; i++) {
+							leftAcc += img->getPixel(leftX, sq.y + i).avg() < 180 ? 1 : 0;
+							rightAcc += img->getPixel(rightX, sq.y + i).avg() < 180 ? 1 : 0;
+						}
+						if (leftAcc > 1 && leftX <= sq.x) leftX--;
+//						else if (leftAcc <= 1 && leftX >= sq.x) leftX++;
+						else done[2] = true;
+						if (rightAcc > 1 && rightX >= sq.x + sq.width) rightX++;
+//						else if (rightAcc <= 1 && rightX <= sq.x + sq.width) rightX--;
+						else done[3] = true;
+						
+					}
+//					Square old = sq;					
+/*					sq.y = changed[1] ? topY : upY;
+					sq.x = changed[2] ? boundLeft : leftX;
+					sq.height = changed[0] ? bottomY - sq.y : downY - sq.y;
+					sq.width = changed[3] ? boundRight - sq.x : rightX - sq.x; */
+					sq.y = upY;
+					sq.height = downY - sq.y;
+					sq.x = leftX;
+					sq.width = rightX - sq.x;					
+					if (sq.width < 3 || sq.height < 3) continue;
+					if (sq.y > horzEqualSpacing.start + horzEqualSpacing.size) continue;
 					characters.push_back(sq);
 				}
 			}
@@ -337,19 +391,71 @@ std::vector<Square> getCharacterLocations(Image * img)
 	delete[] horzAccumulator;
 	return characters;
 }
-char * identifyLetters(Image * img, std::vector<Square> locations)
+#define SAMPLE_WIDTH 5
+#define SAMPLE_HEIGHT 5
+bool isBmp(char * path) {
+	char * pointer = path;
+	char ending[] = ".bmp";
+	int match = 0;
+	while (*pointer != '\0') {
+		if (*pointer == ending[match])
+			match++;
+		else match = 0;
+		pointer++;
+	}
+	return match == sizeof(ending) - 1 ? true : false;
+}
+SearchGrid identifyLetters(Image * img, std::vector<Square> locations)
 {
-	char * characterMap = new char[locations.size()];
 	SearchGrid grid;
-	std::vector<Image *> letters;
-	for (int i = 0; i < 26; i++) {
+	std::vector<KnownSample *> letters;
+/*	for (int i = 0; i < 26; i++) {
 //		gui::Resource res = gui::GUI::loadResource(i, LETTER);
 		std::stringstream ss;
-		ss << "letters\\" << (char)(i + 65) << ".bmp";
+		ss << "letters2\\" << (char)(i + 65) << ".bmp";
 		Image * letterImage = new Image(ss.str().c_str());
-//		letterImage->saveBmp("testKnown.bmp"); //this isnt working
+//		if(i + 65 == 'n' || i + 65 == 'N') letterImage->saveBmp("testKnown.bmp"); 
 		letters.push_back(letterImage);
 //		printf("I: %d \n", i);
+	}*/
+	WIN32_FIND_DATA fData;
+	HANDLE hand = FindFirstFile("C:\\Users\\stephen\\Documents\\Visual Studio 2015\\Projects\\Puzzle Solver + GDI API\\Puzzle Solver + GDI API\\letters\\*", &fData);
+	char fileRead[MAX_PATH];
+	while (hand != INVALID_HANDLE_VALUE) {		
+		if (isBmp(fData.cFileName)) {
+			printf("%s \n", fData.cFileName);
+			sprintf_s(fileRead, MAX_PATH, "C:\\Users\\stephen\\Documents\\Visual Studio 2015\\Projects\\Puzzle Solver + GDI API\\Puzzle Solver + GDI API\\letters\\%s", fData.cFileName);
+			if (!isalpha(fData.cFileName[0])) printf("img name is not a letter! \n");
+			letters.push_back(new KnownSample{ new Image(fileRead), (char)toupper(fData.cFileName[0]) });			
+		}
+		if (FindNextFile(hand, &fData) == FALSE) break;
+	}
+	struct stat fInfo;
+	if (stat("data.ml", &fInfo) == 0) {
+		std::fstream file;
+//		if (fopen_s(&file, "data.ml", "rb")) {
+		file.open("data.ml", std::ios::in | std::ios::binary);
+		if(file.is_open()){
+			int size;
+			file.seekg(0, std::ios::beg);
+			file.read((char*)&size, sizeof(int));
+			printf("Size: %d \n");
+			for (int i = 0; i < size; i++) {
+				channel * data = new channel[25];
+				file.read((char*)data, 25);
+				Image * imgM = new Image(5, 5);
+				for (int j = 0; j < 25; j++) {
+					int x = j % 5;
+					int y = j / 5;
+					imgM->setPixel(x, y, { data[j], data[j], data[j] });
+				}
+				char character;
+				file.read((char*)&character, 1);
+				letters.push_back(new KnownSample{ imgM, (char)toupper(character) });
+				delete data;
+			}
+			file.close();
+		}
 	}
 	for (int i = 0; i < locations.size(); i++) {
 		std::pair<int, int> minDifference = std::make_pair(0, INT_MAX);
@@ -360,49 +466,158 @@ char * identifyLetters(Image * img, std::vector<Square> locations)
 				letter->setPixel(x, y, img->getPixel(x + locations[i].x, y + locations[i].y));
 			}
 		}
-		letter->scaleTo(5, 5);
-//		if (i == 1) letter->saveBmp("testUnknown.bmp");
-		CharacterFeatures score = getImageScore(letter);
-		if (i == 1) {
-			letter->saveBmp("testUnknown.bmp");
-			printf("Elbow1: %d Elbow2: %d Dash: %d V: %d \n", score.elbow1, score.elbow2, score.dash, score.v);
-		}
-		for (int j = 0; j < 26; j++) {
-			int diffScore = 0;		
-			CharacterFeatures cmpScore = getImageScore(letters[j]);
-			diffScore += abs(score.elbow1 - cmpScore.elbow1) + abs(score.elbow2 - cmpScore.elbow2) + abs(score.dash - cmpScore.dash) + abs(score.v - cmpScore.v);
-//			diffScore += abs(letter->integralImageValue(4, 4) - letters[j]->integralImageValue(4, 4));
+		if (i == 4) letter->saveBmp("testUnknownPreScale.bmp");
+		letter->scaleTo(SAMPLE_WIDTH, SAMPLE_HEIGHT);
+		if (i == 4) letter->saveBmp("testUnknown.bmp");
+		for (int j = 0; j < letters.size(); j++) {
+			float diffScore = 0;		
+			int blackL = 0;
+			int blackK = 0;
+			float ratio1L, ratio2L, ratio1K, ratio2K;
+			int threshL = letter->integralImageValue(letter->getWidth() - 1, letter->getHeight() - 1) / (float)(SAMPLE_WIDTH * SAMPLE_HEIGHT);
+			int threshK = (*letters[j])->integralImageValue((*letters[j])->getWidth() - 1, (*letters[j])->getHeight() - 1) / (float)(SAMPLE_WIDTH * SAMPLE_HEIGHT);
+			int sqSize = (SAMPLE_WIDTH * SAMPLE_HEIGHT) / 25;
+			int sqWidth = sqrt(sqSize);
+			for (int k = 0; k < 25; k++) {
+				int x = k % 5;
+				int y = k / 5;
+				float lquadScore = 0;
+				float kquadScore = 0;
+				for (int l = 0; l < sqSize; l++) {
+					int x1 = l % sqWidth;
+					int y1 = l / sqWidth;
+					lquadScore += letter->getPixel(x * sqWidth + x1, y * sqWidth + y1).avg();
+					kquadScore += (*letters[j])->getPixel(x * sqWidth + x1, y * sqWidth + y1).avg();
+
+				}
+				lquadScore /= sqSize;
+				kquadScore /= sqSize;
+				diffScore += (kquadScore - lquadScore) * (kquadScore - lquadScore);
+				
+			}
+			for (int k = 0; k < SAMPLE_WIDTH * SAMPLE_HEIGHT; k++) {
+				int x = k % SAMPLE_WIDTH;
+				int y = k / SAMPLE_WIDTH;
+				if (k == floor((SAMPLE_WIDTH * SAMPLE_HEIGHT) / 2.0)) {
+					ratio1L = blackL / (float)(floor((SAMPLE_WIDTH * SAMPLE_HEIGHT) / 2.0) - blackL);
+					ratio1K = blackK / (float)(floor((SAMPLE_WIDTH * SAMPLE_HEIGHT) / 2.0) - blackK);
+					blackL = 0;
+					blackK = 0;
+				}
+				else if (k == SAMPLE_WIDTH * SAMPLE_HEIGHT - 1) {
+					ratio2L = blackL / (float)(ceil((SAMPLE_WIDTH * SAMPLE_HEIGHT) / 2.0) - blackL);
+					ratio2K = blackK / (float)(ceil((SAMPLE_WIDTH * SAMPLE_HEIGHT) / 2.0) - blackK);
+				}
+				blackL += letter->getPixel(x, y).avg() < threshL ? 1 : 0;
+				blackK += (*letters[j])->getPixel(x, y).avg() < threshK ? 1 : 0;
+			}
+			std::vector<double> widthL, heightL, widthK, heightK;
+			for (int k = 0; k < SAMPLE_WIDTH; k++) {
+				widthL.push_back(letter->getPixel(round(SAMPLE_HEIGHT / 2.0), k).avg() < threshL ? 1 : 0);
+				heightL.push_back(letter->getPixel(k, round(SAMPLE_WIDTH / 2.0)).avg() < threshL ? 1 : 0);
+				widthK.push_back((*letters[j])->getPixel(round(SAMPLE_HEIGHT / 2.0), k).avg() < threshL ? 1 : 0);
+				heightK.push_back((*letters[j])->getPixel(k, round(SAMPLE_WIDTH / 2.0)).avg() < threshL ? 1 : 0);
+			}
+			int mins[] =  { INT_MAX, INT_MAX, INT_MAX, INT_MAX };
+			int maxes[] = { INT_MIN, INT_MIN, INT_MIN, INT_MIN };
+			for (int k = 0; k < SAMPLE_WIDTH; k++) {
+				if (widthL[k]) {
+					min(mins[0], k);
+					max(maxes[0], k);
+				}
+				if (widthK[k]) {
+					min(mins[1], k);
+					max(maxes[1], k);
+				}
+				if (heightL[k]) {
+					min(mins[2], k);
+					max(maxes[2], k);
+				}
+				if (heightK[k]) {
+					min(mins[3], k);
+					max(maxes[3], k);
+				}
+			}
+			diffScore += (ratio1L - ratio1K) * (ratio1L - ratio1K) + (ratio2L - ratio2K) * (ratio2L - ratio2K);
+			diffScore += (((maxes[0] - mins[0]) / (maxes[2] - mins[2])) - ((maxes[1] - mins[1]) / (maxes[3] - mins[3])) * (((maxes[0] - mins[0]) / (maxes[2] - mins[2])) - ((maxes[1] - mins[1]) / (maxes[3] - mins[3]))));
 			if (diffScore < minDifference.second) {
-				minDifference.first = j;
+				minDifference.first = letters[j]->letter;
 				minDifference.second = diffScore;
 			}
 		}
-		characterMap[i] = minDifference.first + 65; //65 is A in ASCII
-		grid.addLetter(minDifference.first + 65, locations[i].x, locations[i].y);
+		grid.addLetter(minDifference.first, locations[i].x, locations[i].y);
+		if (minDifference.second < 5000 && minDifference.second > 100) {
+			//almost gaurunteed match
+			std::fstream file;
+			struct stat fInfo;
+			if (stat("data.ml", &fInfo) == 0) {
+				file.open("data.ml", std::ios::in | std::ios::out | std::ios::binary);
+				if (file.is_open()) {
+					int amount;
+					file.seekg(0, std::ios::beg);
+					file.read((char*)&amount, sizeof(int));
+					amount++;
+					file.seekp(0, std::ios::beg);
+					file.write((char*)&amount, sizeof(int));
+					file.seekp(0, std::ios::end);
+					channel * img = new channel[25];
+					for (int i = 0; i < 25; i++) {
+						int x = i % letter->getWidth();
+						int y = i / letter->getWidth();
+						img[i] = (channel)letter->getPixel(x, y).avg();
+					}
+					file.write((char*)img, 25);
+					char l = (char)minDifference.first;
+					file.write((char*)&l, 1);
+					delete img;
+					file.close();
+				}
+
+			}
+			else {
+				file.open("data.ml", std::ios::out | std::ios::binary);
+				if(file.is_open()){
+					int a = 1;
+					file.seekp(0, std::ios::beg);
+					file.write((char*)&a, sizeof(int));
+					channel * img = new channel[25];
+					for (int i = 0; i < 25; i++) {
+						int x = i % letter->getWidth();
+						int y = i / letter->getWidth();
+						img[i] = (channel)letter->getPixel(x, y).avg();
+					}
+					file.write((char*)img, 25);
+					char l = (char)minDifference.first;
+					file.write((char*)&l, 1);
+					delete img;
+					file.close();
+				}
+			}
+		}
 		delete letter;
 	}
-	for (int i = 0; i < 26; i++)
+	for (int i = 0; i < letters.size(); i++)
 		delete letters[i];
-//	printf("%s \n", characterMap);
 	grid.iterateRowbyRow();
-	return characterMap;
-	//Testing...
-/*	Image * letter = new Image("white.bmp");
-	letter->resize(locations[20].width, locations[20].height);
-	printf("Width: %d Height %d \n", locations[20].width, locations[20].height);
-	for (int x = 0; x < locations[20].width; x++) {
-		for (int y = 0; y < locations[20].height; y++) {
-			letter->setPixel(x, y, img->getPixel(x + locations[20].x, y + locations[20].y));
-		}
-	}
-//	letter->resize(5, 5);
-	letter->scaleTo(5, 5);
-//	letter->toMonochrome();
-	letter->saveBmp("letterSmallTest.bmp");
-//	delete letter;
-	return nullptr;
-
-	//end testing*/
+	return grid;
+ }
+ void augmentDataSet(std::vector<Square> locations, std::vector<char> knowns, Image * img, int firstKnown)
+ {
+	 int size = min(locations.size(), firstKnown + knowns.size());
+	 for (int i = firstKnown; i < size; i++) {
+		 ImgPtr image = new Image(locations[i].width, locations[i].height);
+		 for (int j = 0; j < locations[i].width * locations[i].height; j++) {
+			 int x = j % locations[i].width;
+			 int y = j / locations[i].width;
+			 image->setPixel(x, y, img->getPixel(x + locations[i].x, y + locations[i].y));
+		 }
+		 char path[MAX_PATH];
+		 srand(clock());
+		 int id = rand() % 999;
+		 sprintf_s(path, MAX_PATH, "C:\\Users\\stephen\\Documents\\Visual Studio 2015\\Projects\\Puzzle Solver + GDI API\\Puzzle Solver + GDI API\\letters\\%c %drw.bmp", knowns[i], id);
+		 image->scaleTo(5, 5);
+		 image->saveBmp(path);
+	 }
  }
 #ifdef OLD_ROTATE
 void rotateImage(Image * img, float theta, POINT origin)
@@ -536,33 +751,41 @@ Color bilinearInterpolation(Pixel q1, Pixel q2, Pixel q3, Pixel q4, POINT x)
 	c.b = ((y2 - x.y) / (y2 - y1)) * r1 + ((x.y - y1) / (y2 - y1)) * r2;
 	return c;
 }
-#define THRESHOLD 200
+//#define THRESHOLD 200
 CharacterFeatures getImageScore(Image * img)
 {
 	int score = 0;
 	char elbow1 = 0;
 	char elbow2 = 0;
-	char dash = 0;
+	char dash1 = 0;
+	char dash2 = 0;
 	char v = 0;
+	const int THRESHOLD = img->integralImageValue(img->getWidth() - 1, img->getHeight() - 1) / (float)(img->getHeight() * img->getWidth());
 	for (int i = 0; i < img->getHeight() * img->getWidth(); i++) {
 		int x = i % img->getWidth();
 		int y = i / img->getWidth();
 		for (int j = -1; j <= 1; j++) {
 			if (j == 0) continue;
-			if (y + j > 0 && y + j < img->getHeight() && x - j < img->getWidth() && x - j > 0)
-				elbow1 += img->getPixel(x, y).avg() < THRESHOLD ? (img->getPixel(x - j, y).avg() < THRESHOLD ? (img->getPixel(x, y + j).avg() < THRESHOLD ? (img->getPixel(x - j, y +j).avg() > THRESHOLD ? 1 : 0) : 0) : 0) : 0;
-			if (y - j > 0 && y - j < img->getHeight() && x + j > 0 && x + j < img->getWidth())
-				elbow2 += img->getPixel(x, y).avg() < THRESHOLD ? (img->getPixel(x + j, y).avg() < THRESHOLD ? (img->getPixel(x, y + j).avg() < THRESHOLD ? (img->getPixel(x + j, y + j).avg() > THRESHOLD ? 1 : 0) : 0) : 0) : 0;
-			if (y + j > 0 && y + j < img->getHeight() && x + j > 0 && x + j < img->getHeight())
-				dash += img->getPixel(x, y).avg() < THRESHOLD ? (img->getPixel(x + j, y + j).avg() < THRESHOLD ? (img->getPixel(x - j, y - j).avg() < THRESHOLD ? 1 : 0) : 0) : 0;
-			if (y + j > 0 && y + j < img->getHeight() && x + 1 < img->getWidth() && x - 1 > 0)
-				v += img->getPixel(x, y).avg() < THRESHOLD ? (img->getPixel(x + 1, y + j).avg() < THRESHOLD ? (img->getPixel(x - 1, y + j).avg() < THRESHOLD ? 1 : 0) : 0) : 0;
+			if (y + j >= 0 && y + j < img->getHeight() && x - j < img->getWidth() && x - j >= 0)
+				if (img->getPixel(x, y).avg() < THRESHOLD && img->getPixel(x - j, y).avg() < THRESHOLD && img->getPixel(x, y + j).avg() < THRESHOLD && img->getPixel(x - j, y + j).avg() >= THRESHOLD) elbow1++;
+//				elbow1 += img->getPixel(x, y).avg() < THRESHOLD ? (img->getPixel(x - j, y).avg() < THRESHOLD ? (img->getPixel(x, y + j).avg() < THRESHOLD ? (img->getPixel(x - j, y +j).avg() > THRESHOLD ? 1 : 0) : 0) : 0) : 0;
+			if (y + j >= 0 && y + j < img->getHeight() && x + j >= 0 && x + j < img->getWidth())
+				if (img->getPixel(x, y).avg() < THRESHOLD && img->getPixel(x + j, y).avg() < THRESHOLD && img->getPixel(x, y + j).avg() < THRESHOLD && img->getPixel(x + j, y + j).avg() >= THRESHOLD) elbow2++;
+//				elbow2 += img->getPixel(x, y).avg() < THRESHOLD ? (img->getPixel(x + j, y).avg() < THRESHOLD ? (img->getPixel(x, y + j).avg() < THRESHOLD ? (img->getPixel(x + j, y + j).avg() > THRESHOLD ? 1 : 0) : 0) : 0) : 0;
+//				dash += img->getPixel(x, y).avg() < THRESHOLD ? (img->getPixel(x + j, y + j).avg() < THRESHOLD ? (img->getPixel(x - j, y - j).avg() < THRESHOLD ? 1 : 0) : 0) : 0;
+			if (y + j >= 0 && y + j < img->getHeight() && x + 1 < img->getWidth() && x - 1 >= 0)
+				if (img->getPixel(x, y).avg() < THRESHOLD && img->getPixel(x + 1, y + j).avg() < THRESHOLD && img->getPixel(x - 1, y + j).avg() < THRESHOLD && img->getPixel(x, y + j).avg() >= THRESHOLD) v++;
+//				v += img->getPixel(x, y).avg() < THRESHOLD ? (img->getPixel(x + 1, y + j).avg() < THRESHOLD ? (img->getPixel(x - 1, y + j).avg() < THRESHOLD ? 1 : 0) : 0) : 0;
 
+		}
+		if (y + 1 >= 0 && y + 1 < img->getHeight() && x + 1 >= 0 && x + 1 < img->getWidth() && x - 1 >= 0 && x - 1 < img->getWidth() && y - 1 >= 0 && y - 1 < img->getHeight()) {
+			if (img->getPixel(x, y).avg() < THRESHOLD && img->getPixel(x + 1, y + 1).avg() < THRESHOLD && img->getPixel(x - 1, y - 1).avg() < THRESHOLD) dash1++;
+			if (img->getPixel(x, y).avg() < THRESHOLD && img->getPixel(x + 1, y - 1).avg() < THRESHOLD && img->getPixel(x - 1, y + 1).avg() < THRESHOLD) dash2++;
 		}
 
 		
 	}
-	return CharacterFeatures{elbow1, elbow2, dash, v};
+	return CharacterFeatures{elbow1, elbow2, dash1, dash2, v, THRESHOLD};
 }
 Rect::operator Square()
 {
@@ -610,13 +833,13 @@ void SearchGrid::addLetter(char c, int x, int y)
 //			printf("Column greater: %d \n", currentColumn);
 		}
 		else if (x < lastColumn.second) {
-			if (abs(x - column0X) < 5) {
+//			if (abs(x - column0X) < 5) {
 				lastColumn = std::make_pair(0, column0X);
 				currentColumn = 0;
 //				printf("Column reset \n");
-			}
-			else
-				printf("IDK column \n");
+//			}
+//			else
+//				printf("IDK column \n");
 		}
 //		printf("%d %d \n", currentRow, currentColumn);
 		letters.push_back(new Letter{ currentRow, currentColumn, c });
