@@ -1,11 +1,14 @@
 #pragma once
+#include <winres.h>
 #define ID_CURSOR_PEN 301
 #define ID_ICON 201
 #define ID_MENU 101
-#define IDM_LOAD 111
+#define IDM_LOAD_MAZE 111
 #define IDM_SAVE 121
 #define IDM_CROP 131
-#define IDM_SOLVE 141
+#define IDM_SOLVE_MAZE 141
+#define IDM_LOAD_SEARCH 151
+#define IDM_SOLVE_SEARCH 161
 
 #define LETTER 573
 #define ID_A 574
@@ -35,3 +38,12 @@
 #define ID_Y 598
 #define ID_Z 599
 #define ID_ALPHA_MAX 600
+
+#define IDD_LOAD 971
+#define IDC_CHECK1 972
+#define IDC_CHECK2 973
+#define IDC_EDIT1 974
+#define IDC_EDIT2 975
+#define IDC_EDIT3 976
+#define IDC_BUTTON1 977
+#define IDC_CHECK3 978

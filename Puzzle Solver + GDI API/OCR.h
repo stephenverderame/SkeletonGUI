@@ -8,6 +8,7 @@
 #include <sstream>
 #include <fstream>
 #include <time.h>
+#include <map>
 struct Square {
 	int x;
 	int y;
@@ -67,7 +68,8 @@ struct CharacterFeatures {
 	int threshold;
 };
 POINT matrixMultiply(float * matrix, POINT vector);
-float findSkewAngle(Image * img, POINT * origin, Bounds * skewBounds = NULL);
+float findSkewAngle(Image * img, POINT * origin = nullptr, Bounds * skewBounds = NULL);
+POINT getOrigin(Image * img);
 void rotateImage(Image * img, float theta, POINT origin);
 std::vector<Square> getCharacterLocations(Image * img);
 SearchGrid identifyLetters(Image * img, std::vector<Square> locations);

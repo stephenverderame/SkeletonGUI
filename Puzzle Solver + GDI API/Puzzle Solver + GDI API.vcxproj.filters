@@ -43,4 +43,9 @@
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="bPen.cur">
+      <Filter>Resource Files</Filter>
+    </None>
+  </ItemGroup>
 </Project>

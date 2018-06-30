@@ -6,42 +6,10 @@ POINT matrixMultiply(float * matrix, POINT vector) {
 	return result;
 }
 float findSkewAngle(Image * img, POINT * origin, Bounds * skewBounds) {
-	int startY = 0;
-	int startX = 0;
-	int totalAvg = img->integralImageValue(img->getWidth() - 1, img->getHeight() - 1) - img->integralImageValue(0, img->getHeight() - 1) - img->integralImageValue(img->getWidth() - 1, 0) + img->integralImageValue(0, 0);
-	totalAvg /= (img->getWidth() * img->getHeight());
-	printf("%d \n", totalAvg);
-	for (int i = 0; i < img->getWidth() * img->getHeight(); i++) {
-		int x = i % img->getWidth();
-		int y = i / img->getWidth();
-		Color c = img->getPixel(x, y);
-		if (c.avg() < 100) {
-			int xp = min(x + (.15 * img->getWidth()), img->getWidth() - 1);
-			int yp = min(y + (.15 * img->getHeight()), img->getHeight() - 1);
-			int xm = max(x - (.15 * img->getWidth()), 0);
-			int ym = max(y - (.15 * img->getHeight()), 0);
-			if (xp != (int)(x + (.15 * img->getWidth())))
-				xm -= (x + .15 * img->getWidth()) - (img->getWidth() - 1);
-			else if (xm != (int)(x - (.15 * img->getWidth())))
-				xp += 0 - (x - .15 * img->getWidth());
-			if (yp != (int)(y + .15 * img->getHeight()))
-				ym -= (y + .15 * img->getHeight()) - (img->getHeight() - 1);
-			else if (ym != (int)(y - .15 * img->getHeight()))
-				yp += 0 - (y - .15 * img->getHeight());
-			int avg = img->integralImageValue(xp, yp) - img->integralImageValue(xm, yp) - img->integralImageValue(xp, ym) - img->integralImageValue(xm, ym);
-			printf("Avg: %d \n", avg);
-			avg /= (xp - xm) * (yp - ym);
-			avg = abs(avg);
-			if (avg < totalAvg) {
-				printf("Area avg: %d \n", avg);
-				printf("Start (%d,%d) \n", x, y);
-				startY = y;// +7; //puts point in the middle of most letters
-				startX = x;
-				break;
-			}
-		}
-	}
-	if (origin != NULL) *origin = { startX, startY };
+	if (origin == nullptr)
+		*origin = getOrigin(img);
+	int startX = origin->x;
+	int startY = origin->y;
 	std::vector<POINT> line;
 	int * accumulator = new int[360];
 	memset(accumulator, 0, 360 * sizeof(int));
@@ -432,33 +400,35 @@ SearchGrid identifyLetters(Image * img, std::vector<Square> locations)
 	}
 	struct stat fInfo;
 	if (stat("data.ml", &fInfo) == 0) {
-		std::fstream file;
-//		if (fopen_s(&file, "data.ml", "rb")) {
+		std::ifstream file;
 		file.open("data.ml", std::ios::in | std::ios::binary);
 		if(file.is_open()){
-			int size;
-			file.seekg(0, std::ios::beg);
+			int size = 0;
 			file.read((char*)&size, sizeof(int));
-			printf("Size: %d \n");
+			printf("Size: %d \n", size);
+			channel * data = new channel[26 * size];
+			file.read((char*)data, 26 * size);
 			for (int i = 0; i < size; i++) {
-				channel * data = new channel[25];
-				file.read((char*)data, 25);
+				channel * dr = data + (26 * i);
 				Image * imgM = new Image(5, 5);
+				char character = dr[25];
+				int sum = 0;
 				for (int j = 0; j < 25; j++) {
 					int x = j % 5;
 					int y = j / 5;
-					imgM->setPixel(x, y, { data[j], data[j], data[j] });
+					imgM->setPixel(x, y, { dr[j], dr[j], dr[j] });
+					sum += dr[j];
 				}
-				char character;
-				file.read((char*)&character, 1);
 				letters.push_back(new KnownSample{ imgM, (char)toupper(character) });
-				delete data;
+				printf("Read %c with %d \n", character, sum);
 			}
 			file.close();
+			delete data;
 		}
 	}
+	std::multimap<char, channel *> guaranteed;
 	for (int i = 0; i < locations.size(); i++) {
-		std::pair<int, int> minDifference = std::make_pair(0, INT_MAX);
+		std::pair<char, int> minDifference = std::make_pair(0, INT_MAX);
 		Image * letter = new Image("white.bmp");
 		letter->resize(locations[i].width, locations[i].height);
 		for (int x = 0; x < locations[i].width; x++) {
@@ -546,55 +516,60 @@ SearchGrid identifyLetters(Image * img, std::vector<Square> locations)
 			}
 		}
 		grid.addLetter(minDifference.first, locations[i].x, locations[i].y);
-		if (minDifference.second < 5000 && minDifference.second > 100) {
+		if (minDifference.second < 81000 && minDifference.second > 100) {
 			//almost gaurunteed match
-			std::fstream file;
-			struct stat fInfo;
-			if (stat("data.ml", &fInfo) == 0) {
-				file.open("data.ml", std::ios::in | std::ios::out | std::ios::binary);
-				if (file.is_open()) {
-					int amount;
-					file.seekg(0, std::ios::beg);
-					file.read((char*)&amount, sizeof(int));
-					amount++;
-					file.seekp(0, std::ios::beg);
-					file.write((char*)&amount, sizeof(int));
-					file.seekp(0, std::ios::end);
-					channel * img = new channel[25];
-					for (int i = 0; i < 25; i++) {
-						int x = i % letter->getWidth();
-						int y = i / letter->getWidth();
-						img[i] = (channel)letter->getPixel(x, y).avg();
-					}
-					file.write((char*)img, 25);
-					char l = (char)minDifference.first;
-					file.write((char*)&l, 1);
-					delete img;
-					file.close();
-				}
+			channel * data = new channel[25];
+			int sum = 0;
+			for (int i = 0; i < 25; i++) {
+				int x = i % 5;
+				int y = i / 5;
+				data[i] = (channel)letter->getPixel(x, y).avg();
+				sum += data[i];
+			}
+			guaranteed.insert(std::make_pair(minDifference.first, data));
+			printf("Insert %c with %d \n", minDifference.first, sum);
 
-			}
-			else {
-				file.open("data.ml", std::ios::out | std::ios::binary);
-				if(file.is_open()){
-					int a = 1;
-					file.seekp(0, std::ios::beg);
-					file.write((char*)&a, sizeof(int));
-					channel * img = new channel[25];
-					for (int i = 0; i < 25; i++) {
-						int x = i % letter->getWidth();
-						int y = i / letter->getWidth();
-						img[i] = (channel)letter->getPixel(x, y).avg();
-					}
-					file.write((char*)img, 25);
-					char l = (char)minDifference.first;
-					file.write((char*)&l, 1);
-					delete img;
-					file.close();
-				}
-			}
 		}
 		delete letter;
+	}
+	if (guaranteed.size() > 0) {
+		channel * data = new channel[26 * guaranteed.size()];
+		int i = 0;
+		for (auto it = guaranteed.begin(); it != guaranteed.end(); it++) {
+			memcpy_s(data + i * 26, 26 * guaranteed.size(), (*it).second, 25);
+			data[i * 26 + 25] = (*it).first;
+			delete (*it).second;
+			i++;
+		}
+		struct stat fInfo;
+		if (stat("data.ml", &fInfo) == 0) {
+			//file exists
+			printf("Exists \n");
+			std::fstream file;
+			file.open("data.ml", std::ios::in | std::ios::out | std::ios::binary);
+			if (file.is_open()) {
+				int size;
+				file.read((char*)&size, sizeof(int));
+				size += guaranteed.size();
+				file.write((char*)&size, sizeof(int));
+				file.seekp(0, std::ios::end);
+				file.write((char*)data, 26 * guaranteed.size());
+				file.close();
+			}
+			else printf("Could not open for read/write \n");
+		}
+		else {
+			std::ofstream file;
+			file.open("data.ml", std::ios::binary | std::ios::out);
+			if (file.is_open()) {
+				int size = guaranteed.size();
+				printf("Writing size of: %d \n", size);
+				file.write((char*)&size, sizeof(int));
+				file.write((char*)data, 26 * guaranteed.size());
+				file.close();
+			}
+			else printf("Could not open for writing \n");
+		}
 	}
 	for (int i = 0; i < letters.size(); i++)
 		delete letters[i];
@@ -613,14 +588,53 @@ SearchGrid identifyLetters(Image * img, std::vector<Square> locations)
 		 }
 		 char path[MAX_PATH];
 		 srand(clock());
-		 int id = rand() % 999;
+		 int id = rand() % 1000;
 		 sprintf_s(path, MAX_PATH, "C:\\Users\\stephen\\Documents\\Visual Studio 2015\\Projects\\Puzzle Solver + GDI API\\Puzzle Solver + GDI API\\letters\\%c %drw.bmp", knowns[i], id);
 		 image->scaleTo(5, 5);
 		 image->saveBmp(path);
 	 }
  }
+POINT getOrigin(Image * img)
+{
+	int startY = 0;
+	int startX = 0;
+	int totalAvg = img->integralImageValue(img->getWidth() - 1, img->getHeight() - 1) - img->integralImageValue(0, img->getHeight() - 1) - img->integralImageValue(img->getWidth() - 1, 0) + img->integralImageValue(0, 0);
+	totalAvg /= (img->getWidth() * img->getHeight());
+	printf("%d \n", totalAvg);
+	for (int i = 0; i < img->getWidth() * img->getHeight(); i++) {
+		int x = i % img->getWidth();
+		int y = i / img->getWidth();
+		Color c = img->getPixel(x, y);
+		if (c.avg() < 100) {
+			int xp = min(x + (.15 * img->getWidth()), img->getWidth() - 1);
+			int yp = min(y + (.15 * img->getHeight()), img->getHeight() - 1);
+			int xm = max(x - (.15 * img->getWidth()), 0);
+			int ym = max(y - (.15 * img->getHeight()), 0);
+			if (xp != (int)(x + (.15 * img->getWidth())))
+				xm -= (x + .15 * img->getWidth()) - (img->getWidth() - 1);
+			else if (xm != (int)(x - (.15 * img->getWidth())))
+				xp += 0 - (x - .15 * img->getWidth());
+			if (yp != (int)(y + .15 * img->getHeight()))
+				ym -= (y + .15 * img->getHeight()) - (img->getHeight() - 1);
+			else if (ym != (int)(y - .15 * img->getHeight()))
+				yp += 0 - (y - .15 * img->getHeight());
+			int avg = img->integralImageValue(xp, yp) - img->integralImageValue(xm, yp) - img->integralImageValue(xp, ym) - img->integralImageValue(xm, ym);
+			printf("Avg: %d \n", avg);
+			avg /= (xp - xm) * (yp - ym);
+			avg = abs(avg);
+			if (avg < totalAvg) {
+				printf("Area avg: %d \n", avg);
+				printf("Start (%d,%d) \n", x, y);
+				startY = y + 7; //puts point in the middle of most letters
+				startX = x;
+				break;
+			}
+		}
+	}
+	return { startX, startY };
+}
 #ifdef OLD_ROTATE
-void rotateImage(Image * img, float theta, POINT origin)
+ void rotateImage(Image * img, float theta, POINT origin)
 {
 	Color * buffer = new Color[img->getWidth() * img->getHeight()];
 	//Debugging
@@ -665,7 +679,7 @@ void rotateImage(Image * img, float theta, POINT origin)
 	}
 	//end debugging
 	//mapping from destination back to source and picks out source pixel to reduce the "holes" in the image
-	float rotationMatrix[] = {
+	float rotationMatrix[] = { //rotating to the negative angle is same thing as taking inverse of rotation matrix to that angle
 		cos(radians(-theta)),  -sin(radians(-theta)),
 		sin(radians(-theta)),  cos(radians(-theta))
 	};
