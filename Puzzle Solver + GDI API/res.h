@@ -47,3 +47,4 @@
 #define IDC_EDIT3 976
 #define IDC_BUTTON1 977
 #define IDC_CHECK3 978
+#define IDC_EDIT4 979

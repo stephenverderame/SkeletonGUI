@@ -58,15 +58,17 @@ void calculatePath() {
 float getWndVal(HWND parent, int control) {
 	int size = GetWindowTextLength(GetDlgItem(parent, control));
 	if (size == 0) return 0;
-	char * txt = new char[size];
+	char * txt = new char[size + 1];
 	float f;
-	GetWindowText(GetDlgItem(parent, control), txt, size);
+	GetWindowText(GetDlgItem(parent, control), txt, size + 1);
 	printf("%s \n", txt);
 //	txt[size] = '\0';
 	f = atoi(txt);
 	delete[] txt;
 	return f;
 }
+std::vector<POINT> minLine;
+std::vector<POINT> maxLine;
 BOOL CALLBACK ldDialogProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
 	switch (msg) {
 	case WM_INITDIALOG:
@@ -78,6 +80,7 @@ BOOL CALLBACK ldDialogProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
 		SetWindowText(min, "0");
 		SetWindowText(max, "360");
 		EnableWindow(GetDlgItem(hwnd, IDC_EDIT3), 0);
+		EnableWindow(GetDlgItem(hwnd, IDC_EDIT4), 0);
 		break;
 	}
 	case WM_COMMAND:
@@ -88,49 +91,32 @@ BOOL CALLBACK ldDialogProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
 			if (SendMessage(GetDlgItem(hwnd, IDC_CHECK1), BM_GETCHECK, 0, 0) == BST_CHECKED) {
 				int size = GetWindowTextLength(GetDlgItem(hwnd, IDC_EDIT1));
 				char * entryText = new char[size + 1];
-				GetWindowText(GetDlgItem(hwnd, IDC_EDIT1), entryText, size);
-				entryText[size] = '\0';
-				for (int i = 0; i < size; i++) {
-					if ((!isdigit(entryText[i])) && entryText[i] != '.') {
-						min = 0;
-						break;
-					}
-				}
+				GetWindowText(GetDlgItem(hwnd, IDC_EDIT1), entryText, size + 1);
 				min = atof(entryText);
 				delete[] entryText;
 				size = GetWindowTextLength(GetDlgItem(hwnd, IDC_EDIT2));
 				entryText = new char[size + 1];
-				GetWindowText(GetDlgItem(hwnd, IDC_EDIT2), entryText, size);
-				entryText[size] = '\0';
-				for (int i = 0; i < size; i++) {
-					if ((!isdigit(entryText[i])) && entryText[i] != '.') {
-						max = 360;
-						break;
-					}
-				}
+				GetWindowText(GetDlgItem(hwnd, IDC_EDIT2), entryText, size + 1);
 				max = atof(entryText);
 				delete[] entryText;
 
 			}
-			else {
+			else if(SendMessage(GetDlgItem(hwnd, IDC_CHECK3), BM_GETCHECK, 0, 0) == BST_UNCHECKED){
 				int size = GetWindowTextLength(GetDlgItem(hwnd, IDC_EDIT3));
 				char * entryText = new char[size + 1];
-				GetWindowText(GetDlgItem(hwnd, IDC_EDIT3), entryText, size);
-				entryText[size] = '\0';
-				for (int i = 0; i < size; i++) {
-					if ((!isdigit(entryText[i])) && entryText[i] != '.') {
-						min = 0;
-						max = 360;
-						break;
-					}
-				}
+				GetWindowText(GetDlgItem(hwnd, IDC_EDIT3), entryText, size + 1);
 				min = atof(entryText);
 				max = min;
 				delete[] entryText;
 
 			}
+			else {
+				data[0] = -1;
+				data[1] = -7;
+			}
 			data[0] = min;
 			data[1] = max;
+			currentCursor = CURSOR_NORMAL;
 			Event e(WM_COMMAND, EventParams((LPARAM)data, w));
 			display.fireEvent(e);
 //			EndDialog(hwnd, IDC_BUTTON1);
@@ -138,20 +124,29 @@ BOOL CALLBACK ldDialogProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
 		}
 		else if (HIWORD(w) == EN_CHANGE) {
 			int control;
-			COLORREF c;
 			if ((HWND)l == GetDlgItem(hwnd, IDC_EDIT1)) {
 				control = IDC_EDIT1;
-				c = RGB(128, 0, 128);
 			}
 			else if ((HWND)l == GetDlgItem(hwnd, IDC_EDIT2)) {
 				control = IDC_EDIT2;
-				c = RGB(255, 255, 0);
 			}
 			else {
 				control = IDC_EDIT3;
-				c = RGB(255, 0, 0);
 			}
 			float theta = getWndVal(hwnd, control);
+			if (control == IDC_EDIT3) {
+				float decimal = getWndVal(hwnd, IDC_EDIT4);
+				int places = 0;
+				int dec = (int)floor(decimal);
+				while (dec > 0) {
+					dec /= 10;
+					places++;
+				}
+				printf("Places %d \n", places);
+				if (places != 0)
+					theta += decimal / (pow(10, places));
+			}
+				
 			printf("Theta: %f \n", theta);
 			std::vector<POINT> line;
 			for (int i = origin.x; i < img->getWidth(); i++) {
@@ -162,35 +157,68 @@ BOOL CALLBACK ldDialogProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
 				sin(radians(theta)),	 cos(radians(theta))
 			};
 			for (int i = 0; i < line.size(); i++) {
+				line[i] = { line[i].x - origin.x, line[i].y - origin.y };
 				line[i] = matrixMultiply(rotMat, line[i]);
+				line[i] = { line[i].x + origin.x, line[i].y + origin.y };
 			}
-			PAINTSTRUCT p;
-			HDC dc = BeginPaint(display, &p);
-			for (int i = 0; i < line.size(); i++) {
-				SetPixel(dc, line[i].x, line[i].y, c);
+			if (control == IDC_EDIT1)
+				minLine = line;
+			else if (control == IDC_EDIT2)
+				maxLine = line;
+			HDC dc = GetDC(display);
+			display.getCanvas()->draw(dc);
+			if (control == IDC_EDIT1 || control == IDC_EDIT2) {
+				for (int i = 0; i < minLine.size(); i++) {
+					SetPixel(dc, minLine[i].x, minLine[i].y, RGB(128, 0, 128));
+					
+				}
+				for (int i = 0; i < maxLine.size(); i++) {
+					SetPixel(dc, maxLine[i].x, maxLine[i].y, RGB(128, 128, 0));
+				}
 			}
-			EndPaint(display, &p);
+			else {
+				for (int i = 0; i < line.size(); i++) {
+					SetPixel(dc, line[i].x, line[i].y, RGB(255, 0, 0));
+				}
+			}
+			ReleaseDC(hwnd, dc);
 		}
 		else if (HIWORD(w) == BN_CLICKED) {
 			if ((HWND)l == GetDlgItem(hwnd, IDC_CHECK1)) {
 				BOOL enable = SendMessage((HWND)l, BM_GETCHECK, 0, 0);
 				EnableWindow(GetDlgItem(hwnd, IDC_EDIT3), !enable);
+				EnableWindow(GetDlgItem(hwnd, IDC_EDIT4), !enable);
+				for (int i = IDC_CHECK2; i < IDC_EDIT3; i++)
+					EnableWindow(GetDlgItem(hwnd, i), enable);
+				pOrigin = !enable;
+				if (pOrigin)
+					currentCursor = CURSOR_DRAW;
+				else
+					currentCursor = CURSOR_NORMAL;
 			}
 			else if ((HWND)l == GetDlgItem(hwnd, IDC_CHECK3)) {
 				BOOL enable = SendMessage((HWND)l, BM_GETCHECK, 0, 0);
-				for (int i = IDC_CHECK1; i < IDC_CHECK3; i++) {
-					if (i == IDC_BUTTON1) continue;
+				for (int i = IDC_CHECK1; i <= IDC_EDIT4; i++) {
+					if (i == IDC_BUTTON1 || i == IDC_CHECK3) continue;
 					EnableWindow(GetDlgItem(hwnd, i), !enable);
+				}
+				if (enable) {
+					minLine.resize(0);
+					maxLine.resize(0);
+					RECT r;
+					GetClientRect(display, &r);
+					InvalidateRect(display, &r, TRUE);
 				}
 			}
 			else if ((HWND)l == GetDlgItem(hwnd, IDC_CHECK2)) {
 				if (SendMessage((HWND)l, BM_GETCHECK, 0, 0)) {
 					pOrigin = true;
-					currentCursor = CURSOR_SELECT;
+					currentCursor = CURSOR_DRAW;
 					MessageBox(hwnd, "Click the point on the image where you want the center of rotation", "Pick Origin", MB_OK | MB_ICONINFORMATION);
 				}
 				else {
 					currentCursor = CURSOR_NORMAL;
+					origin = getOrigin(img);
 					pOrigin = false;
 				}
 			}
@@ -295,13 +323,7 @@ LRESULT CALLBACK customProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
 	}
 	else if (msg == WM_LBUTTONDOWN && pOrigin) {
 		origin = { GET_X_LPARAM(l), GET_Y_LPARAM(l) };
-		HDC dc = BeginPaint(hwnd, &paint);
-		for (int x = -1; x <= 1; x++) {
-			for (int y = -1; y <= 1; y++) {
-				SetPixel(dc, x, y, RGB(0, 191, 255));
-			}
-		}
-		EndPaint(hwnd, &paint);
+
 	}
 	if (msg == WM_ERASEBKGND && crop) return TRUE;
 	if (msg == WM_PAINT && clicks > 0) {
@@ -411,9 +433,23 @@ int main(){
 				img = new Image(path.c_str(), 0, 0);
 				display.drawImage(img);
 				img->toMonochrome();
+				origin = getOrigin(img);
 //				int ret = DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_LOAD), display, ldDialogProc);
 				ldModelessDialog = CreateDialog(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_LOAD), display, ldDialogProc);
 				ShowWindow(ldModelessDialog, SW_SHOW);
+				Scrollbar * scroll = (Scrollbar*)mainPage->getCurrentPage()->getControl("testScroll");
+				scroll->update(max(img->getWidth() - display.getDimensions().width, 2));
+				scroll = (Scrollbar*)mainPage->getCurrentPage()->getControl("scrollVert");
+				scroll->update(max(img->getHeight() - display.getDimensions().height, 2));
+			}
+		}
+		else if (LOWORD(ep.getParam3()) == IDM_LOAD_MAZE) {
+			fileFilter f("Images (.bmp)", { ".bmp" });
+			std::string path = openFileDialog(&f);
+			if (path.size() > 1) {
+				if (img != nullptr)
+					delete img;
+				img = new Image(path.c_str(), 0, 0);
 				Scrollbar * scroll = (Scrollbar*)mainPage->getCurrentPage()->getControl("testScroll");
 				scroll->update(max(img->getWidth() - display.getDimensions().width, 2));
 				scroll = (Scrollbar*)mainPage->getCurrentPage()->getControl("scrollVert");
@@ -454,15 +490,21 @@ int main(){
 		else if (LOWORD(ep.getParam3()) == IDC_BUTTON1) {
 			float * bounds = (float*)ep.getParaml();
 			Bounds b{ bounds[0], bounds[1] };
-			float f = findSkewAngle(img, &origin, &b);
-			delete[] bounds;
-			printf("Angle: %f \n", f);
-			//				rotateImage(img, -f, origin);
+			float f;
+			if (bounds[0] != bounds[1] && bounds[0] != -1 && bounds[1] != -7)
+				f = findSkewAngle(img, &origin, &b);
+			else
+				f = bounds[0];
+			if (bounds[0] != -1 && bounds[1] != -7) {
+				printf("Angle: %f \n", f);
+				rotateImage(img, -f, origin);
+			}
 			auto list = getCharacterLocations(img);
 			//				augmentDataSet(list, {'T', 'N', 'E', 'R', 'R', 'U', 'C', 'M', 'M', 'A', 'G', 'N', 'E', 'T', 'I', 'S', 'M', 'P'}, img);
 			//				augmentDataSet(list, { 'D', 'N', 'T', 'I', 'G', 'C', 'A', 'J', 'C', 'A', 'O', 'J', 'O', 'H', 'S', 'I', 'E', 'I', 'B', 'A' }, img);
 			//				augmentDataSet(list, { 'H', 'M', 'E', 'G', 'Q', 'T', 'Z', 'M', 'R', 'H', 'Y', 'L', 'S', 'R' }, img);
 			identifyLetters(img, list);
+			delete[] bounds;
 		}
 	}, WM_COMMAND));
 	display.addEventListener(new EventListener([](EventParams ep) {
