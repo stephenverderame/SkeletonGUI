@@ -9,6 +9,7 @@
 #define IDM_SOLVE_MAZE 141
 #define IDM_LOAD_SEARCH 151
 #define IDM_SOLVE_SEARCH 161
+#define IDM_ROTATE 171
 
 #define LETTER 573
 #define ID_A 574
@@ -48,3 +49,5 @@
 #define IDC_BUTTON1 977
 #define IDC_CHECK3 978
 #define IDC_EDIT4 979
+
+#define IDT_UNDO 1234

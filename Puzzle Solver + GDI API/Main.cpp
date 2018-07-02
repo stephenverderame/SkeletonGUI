@@ -11,6 +11,7 @@
 #include "Grid.h"
 #include "OCR.h"
 #include <guiMainEx.h>
+#include <stack>
 using namespace gui;
 MainPage * mainPage;
 Image * img;
@@ -36,6 +37,7 @@ HWND ldModelessDialog;
 #define CURSOR_WAIT 1
 #define CURSOR_DRAW 2
 #define CURSOR_SELECT 3
+std::stack<Image *> undoStack;
 void calculatePath() {
 	sMu.lock();
 	solving = true;
@@ -67,6 +69,16 @@ float getWndVal(HWND parent, int control) {
 	delete[] txt;
 	return f;
 }
+void addToUndoStack(Image * img) {
+	Image * oldImage = new Image(img->getWidth(), img->getHeight());
+	oldImage->setPosition(img->getX(), img->getY());
+	for (int i = 0; i < img->getWidth() * img->getHeight(); i++) {
+		int x = i % img->getWidth();
+		int y = i / img->getWidth();
+		oldImage->setPixel(x, y, img->getPixel(x, y));
+	}
+	undoStack.push(oldImage);
+}
 std::vector<POINT> minLine;
 std::vector<POINT> maxLine;
 BOOL CALLBACK ldDialogProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
@@ -81,6 +93,9 @@ BOOL CALLBACK ldDialogProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
 		SetWindowText(max, "360");
 		EnableWindow(GetDlgItem(hwnd, IDC_EDIT3), 0);
 		EnableWindow(GetDlgItem(hwnd, IDC_EDIT4), 0);
+		HICON icon = (HICON)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(ID_ICON), IMAGE_ICON, 16, 16, 0);
+		if (icon)
+			SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)icon);
 		break;
 	}
 	case WM_COMMAND:
@@ -234,31 +249,7 @@ LRESULT CALLBACK customProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
 	std::vector<Image *> * images = Window::boundWindow->getCanvas()->getImages();
 	HDC hdc;
 	PAINTSTRUCT paint;
-	if (msg == WM_KEYDOWN && !crop) {
-		switch (w) {
-		case VK_LEFT:
-			for (auto it = images->begin(); it != images->end(); it++) {
-				(*it)->setPosition((*it)->getX() - 15, (*it)->getY());
-			}
-			break;
-		case VK_RIGHT:
-			for (auto it = images->begin(); it != images->end(); it++) {
-				(*it)->setPosition((*it)->getX() + 15, (*it)->getY());
-			}
-			break;
-		case VK_UP:
-			for (auto it = images->begin(); it != images->end(); it++) {
-				(*it)->setPosition((*it)->getX(), (*it)->getY() - 15);
-			}
-			break;
-		case VK_DOWN:
-			for (auto it = images->begin(); it != images->end(); it++) {
-				(*it)->setPosition((*it)->getX(), (*it)->getY() + 15);
-			}
-			break;
-		}
-	}
-	if (msg == WM_LBUTTONDOWN && crop && clock() / CLOCKS_PER_SEC > lastTime + 1) {
+	if (msg == WM_LBUTTONDOWN && crop) {
 		lastTime = clock() / CLOCKS_PER_SEC;
 		if (!clicks) {
 			clicks++;
@@ -273,7 +264,24 @@ LRESULT CALLBACK customProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
 			showFinal = true;
 			currentCursor = CURSOR_NORMAL;
 			clicks = 0;
+			addToUndoStack(img);
+			Image * buffer = new Image(abs(position_2.x - position_1.x), abs(position_2.y - position_1.y));
+			for (int x = 0; x < buffer->getWidth(); x++) {
+				for (int y = 0; y < buffer->getHeight(); y++) {
+					buffer->setPixel(x, y, img->getPixel(min(position_1.x, position_2.x) + x, min(position_1.y, position_2.y) + y));
+				}
+			}
+			display.getCanvas()->removeImage(img);
+			delete img;
+			img = buffer;
+			display.getCanvas()->addImage(img);
+			position_1 = { 0, 0 };
+			position_2 = { 0, 0 };
 		}
+	}
+	else if (msg == WM_KEYDOWN && w == 0x55) {
+		if (GetAsyncKeyState(VK_CONTROL) < 0)
+			display.fireEvent(Event(WM_COMMAND, EventParams(0, IDT_UNDO)));
 	}
 	else if (msg == WM_RBUTTONDOWN && (crop || showFinal)) {
 		crop = false;
@@ -357,21 +365,6 @@ LRESULT CALLBACK customProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
 		EndPaint(hwnd, &paint);
 		return TRUE;
 	}
-	else if (msg == WM_PAINT && showFinal) {
-		hdc = BeginPaint(hwnd, &paint);
-		RECT r;
-		GetClientRect(hwnd, &r);
-		FillRect(hdc, &r, (HBRUSH)COLOR_WINDOW);
-		if (Window::boundWindow != nullptr)
-			Window::boundWindow->getCanvas()->draw(hdc);
-		HPEN pen = CreatePen(PS_SOLID, 3, RGB(255, 0, 0));
-		SelectObject(hdc, pen);
-		SelectObject(hdc, GetStockBrush(NULL_BRUSH));
-		Rectangle(hdc, min(position_1.x, position_2.x), min(position_1.y, position_2.y), max(position_1.x, position_2.x), max(position_1.y, position_2.y));
-		DeletePen(pen);
-		EndPaint(hwnd, &paint);
-		return TRUE;
-	}
 	if (msg == WM_MOUSEMOVE && crop) {
 		RECT r;
 		GetClientRect(display, &r);
@@ -395,6 +388,7 @@ int main(){
 		new Scrollbar("testScroll", 10, display.getDimensions().height - 20, display.getDimensions().width - 20, 10, 100, scrollHorz, SBS_HORZ),
 		new Scrollbar("scrollVert", display.getDimensions().width - 10, 0, 10, display.getDimensions().height, 100, scrollVert, SBS_VERT),
 		new Progressbar("progress", 10, display.getDimensions().height - 20, display.getDimensions().width - 20, 20, 0, 100),
+		new Toolbar("toolbar", {new ToolbarControls{IDT_UNDO, gui::tbm_undo}})
 	});
 	p1->setLayout(new AbsoluteLayout());
 	mainPage = new MainPage({
@@ -404,6 +398,7 @@ int main(){
 	Progressbar * p = (Progressbar*)mainPage->getCurrentPage()->getControl("progress");
 	p->setMarquee(true);
 	p->hideComponent();
+	Toolbar * t = (Toolbar*)p1->getControl("toolbar");
 #pragma region eventHandling
 	Scrollbar * scroll = (Scrollbar*)mainPage->getCurrentPage()->getControl("testScroll");
 	scroll->setScrollMessages([](int changePos) {
@@ -427,16 +422,13 @@ int main(){
 			std::string path = openFileDialog(&f);
 			if (path.size() > 1) {
 				if (img != nullptr) {
+					addToUndoStack(img);
 					display.deleteImage(img);
-//					delete img;
+					delete img;
 				}
-				img = new Image(path.c_str(), 0, 0);
+				img = new Image(path.c_str(), 0, 20);
 				display.drawImage(img);
 				img->toMonochrome();
-				origin = getOrigin(img);
-//				int ret = DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_LOAD), display, ldDialogProc);
-				ldModelessDialog = CreateDialog(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_LOAD), display, ldDialogProc);
-				ShowWindow(ldModelessDialog, SW_SHOW);
 				Scrollbar * scroll = (Scrollbar*)mainPage->getCurrentPage()->getControl("testScroll");
 				scroll->update(max(img->getWidth() - display.getDimensions().width, 2));
 				scroll = (Scrollbar*)mainPage->getCurrentPage()->getControl("scrollVert");
@@ -447,9 +439,13 @@ int main(){
 			fileFilter f("Images (.bmp)", { ".bmp" });
 			std::string path = openFileDialog(&f);
 			if (path.size() > 1) {
-				if (img != nullptr)
+				if (img != nullptr) {
+					addToUndoStack(img);
+					display.deleteImage(img);
 					delete img;
-				img = new Image(path.c_str(), 0, 0);
+				}
+				img = new Image(path.c_str(), 0, 20);
+				display.drawImage(img);
 				Scrollbar * scroll = (Scrollbar*)mainPage->getCurrentPage()->getControl("testScroll");
 				scroll->update(max(img->getWidth() - display.getDimensions().width, 2));
 				scroll = (Scrollbar*)mainPage->getCurrentPage()->getControl("scrollVert");
@@ -467,6 +463,13 @@ int main(){
 			crop = true;
 			showFinal = false;
 			currentCursor = CURSOR_SELECT;
+		}
+		else if (LOWORD(ep.getParam3()) == IDM_ROTATE) {
+			addToUndoStack(img);
+			origin = getOrigin(img);
+			//				int ret = DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_LOAD), display, ldDialogProc);
+			ldModelessDialog = CreateDialog(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_LOAD), display, ldDialogProc);
+			ShowWindow(ldModelessDialog, SW_SHOW);
 		}
 		else if (LOWORD(ep.getParam3()) == IDM_SOLVE_MAZE) {
 			if (img != nullptr) {
@@ -499,12 +502,26 @@ int main(){
 				printf("Angle: %f \n", f);
 				rotateImage(img, -f, origin);
 			}
+			delete[] bounds;
+		}
+		else if (LOWORD(ep.getParam3()) == IDT_UNDO) {
+			if (!undoStack.empty()) {
+				display.getCanvas()->removeImage(img);
+				delete img;
+				img = undoStack.top();
+				undoStack.pop();
+				display.getCanvas()->addImage(img);
+				RECT r;
+				GetClientRect(display, &r);
+				InvalidateRect(display, &r, TRUE);
+			}
+		}
+		else if (LOWORD(ep.getParam3()) == IDM_SOLVE_SEARCH) {
 			auto list = getCharacterLocations(img);
 			//				augmentDataSet(list, {'T', 'N', 'E', 'R', 'R', 'U', 'C', 'M', 'M', 'A', 'G', 'N', 'E', 'T', 'I', 'S', 'M', 'P'}, img);
 			//				augmentDataSet(list, { 'D', 'N', 'T', 'I', 'G', 'C', 'A', 'J', 'C', 'A', 'O', 'J', 'O', 'H', 'S', 'I', 'E', 'I', 'B', 'A' }, img);
 			//				augmentDataSet(list, { 'H', 'M', 'E', 'G', 'Q', 'T', 'Z', 'M', 'R', 'H', 'Y', 'L', 'S', 'R' }, img);
 			identifyLetters(img, list);
-			delete[] bounds;
 		}
 	}, WM_COMMAND));
 	display.addEventListener(new EventListener([](EventParams ep) {

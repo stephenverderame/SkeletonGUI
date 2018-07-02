@@ -576,6 +576,26 @@ SearchGrid identifyLetters(Image * img, std::vector<Square> locations)
 	grid.iterateRowbyRow();
 	return grid;
  }
+ void SearchGrid::search(Image * img, std::vector<Square> locations, std::vector<std::string> words)
+ {
+	 std::map<std::string, int> foundWords;
+	 for (std::string word : words) {
+		 for (int i = 0; i < maxRows * maxColumns; i++) {
+			 int x = i % maxColumns;
+			 int y = i / maxColumns;
+			 Letter letter = *letters[i];
+			 std::string posibilities[8]{ "" };
+			 for (int j = 0; j < word.size(); j++) {
+				 char c = word[j];
+				 if (letter == c) {
+					 for (int k = 0; k < 8; k++) {
+						  
+					 }
+				 }
+			 }
+		 }
+	 }
+ }
  void augmentDataSet(std::vector<Square> locations, std::vector<char> knowns, Image * img, int firstKnown)
  {
 	 int size = min(locations.size(), firstKnown + knowns.size());
@@ -879,4 +899,11 @@ void SearchGrid::iterateRowbyRow()
 		}
 		printf("\n");
 	}
+}
+
+bool Letter::operator==(char c)
+{
+	std::vector<std::vector<char>> confusionSets;
+	if (letter == c) return true;
+	return false;
 }

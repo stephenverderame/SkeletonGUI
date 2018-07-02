@@ -9,6 +9,7 @@
 #include <fstream>
 #include <time.h>
 #include <map>
+#include <algorithm>
 struct Square {
 	int x;
 	int y;
@@ -33,6 +34,8 @@ struct Letter {
 	int row;
 	int column;
 	char letter;
+	bool operator==(Letter other) { return *this == other.letter; }
+	bool operator==(char c);
 };
 struct Bounds {
 	float min;
@@ -58,6 +61,10 @@ public:
 	void addLetter(char c, int x, int y);
 	~SearchGrid();
 	void iterateRowbyRow();
+	std::pair<int, int> getDimensions() { return std::pair<int, int>(maxRows, maxColumns); }
+	Letter * getLetter(int i) { return letters[i]; }
+	char getLetter(int columns, int rows) { if (rows >= maxRows || rows < 0 || columns >= maxColumns || columns < 0) return '-'; return letters[rows + maxColumns + columns]->letter; }
+	void search(Image * img, std::vector<Square> locations, std::vector<std::string> words);
 };
 struct CharacterFeatures {
 	int elbow1;
