@@ -37,6 +37,9 @@ struct Letter {
 	bool operator==(Letter other) { return *this == other.letter; }
 	bool operator==(char c);
 };
+struct Line {
+	POINT start, end;
+};
 struct Bounds {
 	float min;
 	float max;
@@ -63,7 +66,7 @@ public:
 	void iterateRowbyRow();
 	std::pair<int, int> getDimensions() { return std::pair<int, int>(maxRows, maxColumns); }
 	Letter * getLetter(int i) { return letters[i]; }
-	char getLetter(int columns, int rows) { if (rows >= maxRows || rows < 0 || columns >= maxColumns || columns < 0) return '-'; return letters[rows + maxColumns + columns]->letter; }
+	char getLetter(int columns, int rows) { if (rows >= maxRows || rows < 0 || columns >= maxColumns || columns < 0) return '-'; return letters[columns * (maxRows + 1) + rows]->letter; }
 	void search(Image * img, std::vector<Square> locations, std::vector<std::string> words);
 };
 struct CharacterFeatures {

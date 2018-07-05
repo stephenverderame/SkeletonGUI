@@ -501,6 +501,10 @@ int main(){
 			if (bounds[0] != -1 && bounds[1] != -7) {
 				printf("Angle: %f \n", f);
 				rotateImage(img, -f, origin);
+				Scrollbar * scroll = (Scrollbar*)mainPage->getCurrentPage()->getControl("testScroll");
+				scroll->update(max(img->getWidth() - display.getDimensions().width, 2));
+				scroll = (Scrollbar*)mainPage->getCurrentPage()->getControl("scrollVert");
+				scroll->update(max(img->getHeight() - display.getDimensions().height, 2));
 			}
 			delete[] bounds;
 		}
@@ -521,7 +525,9 @@ int main(){
 			//				augmentDataSet(list, {'T', 'N', 'E', 'R', 'R', 'U', 'C', 'M', 'M', 'A', 'G', 'N', 'E', 'T', 'I', 'S', 'M', 'P'}, img);
 			//				augmentDataSet(list, { 'D', 'N', 'T', 'I', 'G', 'C', 'A', 'J', 'C', 'A', 'O', 'J', 'O', 'H', 'S', 'I', 'E', 'I', 'B', 'A' }, img);
 			//				augmentDataSet(list, { 'H', 'M', 'E', 'G', 'Q', 'T', 'Z', 'M', 'R', 'H', 'Y', 'L', 'S', 'R' }, img);
-			identifyLetters(img, list);
+			SearchGrid g = identifyLetters(img, list);
+			g.search(img, list, { "MELT" , "REFRACTION", "ALLOY", "SUPERCONDUCTOR"});
+			
 		}
 	}, WM_COMMAND));
 	display.addEventListener(new EventListener([](EventParams ep) {

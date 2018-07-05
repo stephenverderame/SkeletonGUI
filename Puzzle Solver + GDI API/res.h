@@ -51,3 +51,7 @@
 #define IDC_EDIT4 979
 
 #define IDT_UNDO 1234
+
+#define IDD_FIND 1059
+#define IDC_WORD_LIST 1060
+#define IDC_FIND_WORDS 1070
