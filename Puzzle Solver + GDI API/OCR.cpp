@@ -580,77 +580,127 @@ SearchGrid identifyLetters(Image * img, std::vector<Square> locations)
  {
 	 std::map<std::string, int> foundWords;
 	 std::map<std::string, Line> foundWordsPos;
-	 printf("testGetLetter: %c \n", getLetter(3, 6));
+	 printf("testGetLetter: %c \n", getLetter(maxColumns, maxRows));
 	 for (std::string word : words) {
 		 for (int i = 0; i < (maxRows + 1) * (maxColumns + 1); i++) {
 			 int x = i / (maxRows + 1);
 			 int y = i % (maxRows + 1);
 			 Letter letter = *letters[i];
-			 std::string possibilities[8]{ "" };
-			 Line lines[8];
+			 std::vector<std::string> possibilities;
+			 std::vector<Line> lines;
 			 for (int j = 0; j < word.size(); j++) {
-				 char c = word[j];
-				 if (letter == c) {
+				 if (letter == word[j]) {
 					 if (x <= (maxColumns + 1) - (word.size() - j)) {
-						 lines[0].start = { x - j, y };
-						 lines[0].end = {  x + (int)word.size() - j - 1, y };
-						 for (int k = -j; k < word.size() - j; k++) {
-							 possibilities[0] += getLetter(x + k, y);
+						 Line l;
+						 l.start = { x - j, y };
+						 l.end = {  x + (int)word.size() - j - 1, y };
+						 if (!l.outOfBounds(maxRows + 1, maxColumns + 1)) {
+							 std::string p = "";
+							 for (int k = -j; k < word.size() - j; k++) {
+								 p += getLetter(x + k, y);
+							 }
+							 possibilities.push_back(p);
+							 lines.push_back(l);
 						 }
 					 }
 					 if (y <= (maxRows + 1) - (word.size() - j)) {
-						 lines[1].start = { x, y - j };
-						 lines[1].end = { x, y + (int)word.size() - j - 1 };
-						 for (int k = -j; k < word.size() - j; k++) {
-							 possibilities[1] += getLetter(x, y + k);
+						 Line l;
+						 std::string s = "";
+						 l.start = { x, y - j };
+						 l.end = { x, y + (int)word.size() - j - 1 };
+						 if (!l.outOfBounds(maxRows + 1, maxColumns + 1)) {
+							 for (int k = -j; k < word.size() - j; k++) {
+								 s += getLetter(x, y + k);
+							 }
+							 possibilities.push_back(s);
+							 lines.push_back(l);
 						 }
 					 }
-					 if (x <= (maxColumns + 1) - (word.size() - j) && y >= word.size() - j) {
-						 lines[2].start = { x - j, y + j };
-						 lines[2].end = { x + (int)word.size() - j - 1, y - (int)word.size() - j - 1};
-						 for (int k = -j; k < word.size() - j; k++) {
-							 possibilities[2] += getLetter(x + k, y - k);
+#pragma region diagnol
+					 if (x <= (maxColumns + 1) - (word.size() - j) && y + 1 >= word.size() - j) {
+						 Line l;
+						 std::string s = "";
+						 l.start = { x - j, y + j };
+						 l.end = { x + (int)word.size() - j - 1, y - ((int)word.size() - j - 1)};
+						 if (!l.outOfBounds(maxRows + 1, maxColumns + 1)) {
+							 for (int k = -j; k < word.size() - j; k++) {
+								 s += getLetter(x + k, y - k);
+							 }
+							 possibilities.push_back(s);
+							 lines.push_back(l);
 						 }
 					 }
 					 if (x <= (maxColumns + 1) - (word.size() - j) && y <= maxRows - (word.size() - j)) {
-						 lines[3].start = { x - j, y - j };
-						 lines[3].end = { x + (int)word.size() - j - 1, y + (int)word.size() - j - 1 };
-						 for (int k = -j; k < word.size() - j; k++) {
-							 possibilities[3] += getLetter(x + k, y + k);
+						 Line l;
+						 std::string s = "";
+						 l.start = { x - j, y - j };
+						 l.end = { x + (int)word.size() - j - 1, y + (int)word.size() - j - 1 };
+						 if (!l.outOfBounds(maxRows + 1, maxColumns + 1)) {
+							 for (int k = -j; k < word.size() - j; k++) {
+								 s += getLetter(x + k, y + k);
+							 }
+							 possibilities.push_back(s);
+							 lines.push_back(l);
 						 }
 					 }
-					 if (x >= word.size() - j && y >= word.size() - j) {
-						 lines[6].start = { x + j, y + j };
-						 lines[6].end = { x - (int)word.size() - j - 1, y - (int)word.size() - j - 1 };
-						 for (int k = -j; k < word.size() - j; k++) {
-							 possibilities[6] += getLetter(x - k, y - k);
+					 if (x + 1 >= word.size() - j  && y + 1 >= word.size() - j) {
+						 Line l;
+						 std::string s = "";
+						 l.start = { x + j, y + j };
+						 l.end = { x - ((int)word.size() - j - 1), y - ((int)word.size() - j - 1) };
+						 if (!l.outOfBounds(maxRows + 1, maxColumns + 1)) {
+							 for (int k = -j; k < word.size() - j; k++) {
+								 s += getLetter(x - k, y - k);
+							 }
+							 possibilities.push_back(s);
+							 lines.push_back(l);
 						 }
 					 }
-					 if (x >= word.size() - j && y <= (maxRows + 1) - (word.size() - j)) {
-						 lines[7].start = { x + j, y - j };
-						 lines[7].end = { x - (int)word.size() - j - 1, y + (int)word.size() - j - 1 };
-						 for (int k = -j; k < word.size() - j; k++) {
-							 possibilities[7] += getLetter(x - k, y + k);
+					 if (x + 1 >= word.size() - j && y <= (maxRows + 1) - (word.size() - j)) {
+						 Line l;
+						 std::string s = "";
+						 l.start = { x + j, y - j };
+						 l.end = { x - ((int)word.size() - j - 1), y + (int)word.size() - j - 1 };
+						 if (!l.outOfBounds(maxRows + 1, maxColumns + 1)) {
+							 for (int k = -j; k < word.size() - j; k++) {
+								 s += getLetter(x - k, y + k);
+							 }
+							 possibilities.push_back(s);
+							 lines.push_back(l);
 						 }
 					 }
-					 if (x >= word.size() - j) {
-						 lines[4].start = { x + j, y };
-						 lines[4].end = { x - (int)word.size() - j - 1, y };
-						 for (int k = -j; k < word.size() - j; k++) {
-							 possibilities[4] += getLetter(x - k, y);
+#pragma endregion
+					 if (x + 1 >= word.size() - j) {
+						 Line l;
+						 std::string s = "";
+						 l.start = { x + j, y };
+						 l.end = { x - ((int)word.size() - j - 1), y };
+						 if (!l.outOfBounds(maxRows + 1, maxColumns + 1)) {
+							 for (int k = -j; k < word.size() - j; k++) {
+								 s += getLetter(x - k, y);
+							 }
+							 possibilities.push_back(s);
+							 lines.push_back(l);
 						 }
 					 }
-					 if (y >= word.size() - j) {
-						 lines[5].start = { x, y + j };
-						 lines[5].end = { x, y - (int)word.size() - j - 1 };
-						 for (int k = -j; k < word.size() - j; k++) {
-							 possibilities[5] += getLetter(x, y - k);
+					 if (y + 1 >= word.size() - j) {
+						 Line l;
+						 std::string s = "";
+						 l.start = { x, y + j };
+						 l.end = { x, y - ((int)word.size() - j - 1) };
+						 if (!l.outOfBounds(maxRows + 1, maxColumns + 1)) {
+							 for (int k = -j; k < word.size() - j; k++) {
+								 s += getLetter(x, y - k);
+							 }
+							 possibilities.push_back(s);
+							 lines.push_back(l);
 						 }
 					 }
+					 
 				 }
 			 }
 			 std::pair<int, int> maxSame = std::make_pair(0, INT_MIN);
-			 for (int j = 0; j < 8; j++) {
+			 for (int j = 0; j < possibilities.size(); j++) {
 				 int same = 0;
 				 for (int k = 0; k < word.size(); k++) {
 					 if (word[k] == possibilities[j][k])
@@ -659,46 +709,37 @@ SearchGrid identifyLetters(Image * img, std::vector<Square> locations)
 				 if (same > maxSame.second)
 					 maxSame = std::make_pair(j, same);
 			 }
-			 lines[maxSame.first].start.x = max(lines[maxSame.first].start.x, 0);
-			 lines[maxSame.first].start.x = min(lines[maxSame.first].start.x, maxColumns + 1);
-			 lines[maxSame.first].start.y = max(lines[maxSame.first].start.y, 0);
-			 lines[maxSame.first].start.y = min(lines[maxSame.first].start.y, maxRows + 1);
-
-			 lines[maxSame.first].end.x = max(lines[maxSame.first].end.x, 0);
-			 lines[maxSame.first].end.x = min(lines[maxSame.first].end.x, maxColumns + 1);
-			 lines[maxSame.first].end.y = max(lines[maxSame.first].end.y, 0);
-			 lines[maxSame.first].end.y = min(lines[maxSame.first].end.y, maxRows + 1);
-			 if (foundWords.find(word) != foundWords.end()) {
-				 if (foundWords.at(word) < maxSame.second) {
-					 foundWords[word] = maxSame.second;
-					 foundWordsPos[word] = lines[maxSame.first];
+			 if (maxSame.second != INT_MIN && possibilities.size() > 0) {
+				 if (foundWords.find(word) != foundWords.end()) {
+					 if (foundWords.at(word) < maxSame.second) {
+						 foundWords[word] = maxSame.second;
+						 foundWordsPos[word] = lines[maxSame.first];
+					 }
 				 }
-			 }
-			 else {
-				 foundWords.insert(std::make_pair(word, maxSame.second));
-				 foundWordsPos.insert(std::make_pair(word, lines[maxSame.first]));
+				 else {
+					 foundWords.insert(std::make_pair(word, maxSame.second));
+					 foundWordsPos.insert(std::make_pair(word, lines[maxSame.first]));
+				 }
 			 }
 		 }
 	 }
 	 for (auto it = foundWordsPos.begin(); it != foundWordsPos.end(); it++) {
-		 printf("Found words: %s Score: %d \n", it->first.c_str(), foundWords[it->first]);
+		 printf("Found word: %s Score: %d / %d \n", it->first.c_str(), foundWords[it->first], it->first.size());
 		 Line line = it->second;
 		 Square start = locations[line.start.x * (maxRows + 1) + line.start.y];
 		 Square end = locations[line.end.x * (maxRows + 1) + line.end.y];
 		 POINT startpt = { start.x + (start.width / 2), start.y + (start.height / 2) };
 		 POINT endpt = { end.x + (end.width / 2), end.y + (end.height / 2) };
 		 printf("Line from (%d, %d) to (%d, %d) \n", startpt.x, startpt.y, endpt.x, endpt.y);
-		 if (it->first == "REFRACTION") {
-			 printf("Refraction start (%d, %d) \n", start.x, start.y);
-			 printf("Column start: %d Row Start: %d Id start: %d \n", line.start.x, line.start.y, line.start.x * (maxRows + 1) + line.start.y);
-		 }
-		 int dist = sqrt((endpt.x - startpt.x) * (endpt.x - startpt.x) + (endpt.y - startpt.y) * (endpt.y - startpt.y));
+		 printf("Which is (%d, %d) to (%d, %d) \n", line.start.x, line.start.y, line.end.x, line.end.y);
+		 double dist = sqrt((endpt.x - startpt.x) * (endpt.x - startpt.x) + (endpt.y - startpt.y) * (endpt.y - startpt.y));
 		 double theta = acos((endpt.x - startpt.x) / dist);
+		 if (line.start.x != line.end.x || (line.start.x == line.end.x && line.start.y > line.end.y)) theta *= -1;
 		 float matrix[] = {
 			 cos(theta),	-sin(theta),
 			 sin(theta),	 cos(theta)
 		 };
-		 for (int i = 0; i < dist; i++) {
+		 for (int i = 0; i < floor(dist); i++) {
 			 POINT p = { i, 0 };
 			 POINT pr = matrixMultiply(matrix, p);
 			 pr.x += startpt.x;
@@ -1020,5 +1061,12 @@ bool Letter::operator==(char c)
 {
 	std::vector<std::vector<char>> confusionSets;
 	if (letter == c) return true;
+	return false;
+}
+
+bool Line::outOfBounds(int maxRows, int maxColumns)
+{
+	if (start.x < 0 || start.x >= maxColumns || start.y < 0 || start.y >= maxRows ||
+		end.x < 0 || end.x >= maxColumns || end.y < 0 || end.y >= maxRows) return true;
 	return false;
 }

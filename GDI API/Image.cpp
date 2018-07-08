@@ -12,75 +12,36 @@ int getPoint(int x, int y, arrayData data) {
 	if (x < 0 || x >= data.width || y < 0 || y >= data.height) return 0;
 	return data.array[y * data.width + x];
 }
-void Image::convertToBitmap(const char * fileName)
-{
-	int width, height, channels, widthBytes = 0;
-	int padding = 0;
-	unsigned char * data = stbi_load(fileName, &width, &height, &channels, 0);
-	BITMAPFILEHEADER fileHeader;
-	BITMAPINFOHEADER infoHeader;
-	ZeroMemory(&fileHeader, sizeof(fileHeader));
-	ZeroMemory(&infoHeader, sizeof(infoHeader));
-	fileHeader.bfSize = sizeof(BITMAPFILEHEADER) + sizeof(BITMAPINFOHEADER) + (width * height * 3);
-	fileHeader.bfOffBits = 54;
-	fileHeader.bfType = 0x4d42;
-	fileHeader.bfReserved1 = 0;
-	fileHeader.bfReserved2 = 0;
-
-	infoHeader.biSize = sizeof(BITMAPINFOHEADER);
-	infoHeader.biWidth = width;
-	infoHeader.biHeight = height;
-	infoHeader.biPlanes = 1;
-	infoHeader.biBitCount = 24;
-	infoHeader.biCompression = 0;
-	infoHeader.biClrImportant = 0;
-	infoHeader.biSizeImage = width * height * 3;
-	infoHeader.biXPelsPerMeter = 0x0ec4;
-	infoHeader.biYPelsPerMeter = 0x0ec4;
-	infoHeader.biClrUsed = 0;
-	FILE * file;
-	fopen_s(&file, "temp.bmp", "wb");
-	fwrite(&fileHeader, sizeof(fileHeader), 1, file);
-	fwrite(&infoHeader, sizeof(infoHeader), 1, file);
-	fwrite(data, 1, width * height * 3, file);
-	fclose(file);
-	stbi_image_free(data);
-}
-
-Image * Image::newImgFrom(Image * img, int x, int y, int width, int height)
-{
-	Image * newImg = new Image(width, height, x, y, gui::GUI::useWindow());
-	for (int i = x; i < x + width; i++) {
-		int newX = i - x;
-		for (int j = y; j < y + height; j++) {
-			int newY = j - y;
-			newImg->setPixel(newX, newY, img->getPixel(x, y));
-		}
-	}
-	return newImg;
-}
-
 Image::Image(const char * file, HWND window) : rawUpdated(false)
 {
 	int size = strlen(file);
-	if (file[size - 4] != '.' || file[size - 3] != 'b' || file[size - 2] != 'm' || file[size - 1] != 'p') {
-		convertToBitmap(file);
-		bmp = (HBITMAP)LoadImage(NULL, "temp.bmp", IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE | LR_CREATEDIBSECTION);
+	if (file[size - 4] != '.' || tolower(file[size - 3]) != 'b' || tolower(file[size - 2]) != 'm' || tolower(file[size - 1]) != 'p') {
+		int width, height, components;
+		unsigned char * data = stbi_load(file, &width, &height, &components, 3);
+		resize(width, height);
+		for (int i = 0; i < width * height; i++) {
+			int x = i % width;
+			int y = i / width;
+			Color c = { data[i * 3 + 2], data[i * 3 + 1], data[i * 3] };
+			setPixel(x, y, c);
+		}
+		stbi_image_free(data);
+
 	}
 	else {
 		bmp = (HBITMAP)LoadImage(NULL, file, IMAGE_BITMAP, 0, 0, LR_LOADFROMFILE | LR_CREATEDIBSECTION);
 		if (bmp == NULL) printf("BMP failed to load %s \n", file);
+		this->parent = window;
+		BITMAP bm;
+		ZeroMemory(&bm, sizeof(bm));
+		GetObject(bmp, sizeof(bm), &bm);
+		rawData = (channel*)bm.bmBits;
+		scanline = bm.bmWidthBytes;
+		width = bm.bmWidth;
+		height = bm.bmHeight;
+		forcedWidth = width;
+		forcedHeight = height;
 	}
-	this->parent = window;
-	BITMAP bm;
-	ZeroMemory(&bm, sizeof(bm));
-	GetObject(bmp, sizeof(bm), &bm);
-	rawData = (channel*)bm.bmBits;
-	scanline = bm.bmWidthBytes;
-	width = bm.bmWidth;
-	height = bm.bmHeight;
-	forcedWidth = width;
-	forcedHeight = height;
 
 }
 
@@ -309,7 +270,8 @@ void Image::resize(int width, int height)
 	bi.biPlanes = 1;
 	BITMAPINFO bmi;
 	bmi.bmiHeader = bi;
-	DeleteObject(bmp);
+	if(bmp != NULL)
+		DeleteObject(bmp);
 	HDC dc = GetDC(gui::GUI::useWindow());
 	bmp = CreateDIBSection(dc, &bmi, DIB_RGB_COLORS, (void**)&rawData, NULL, NULL);
 	if (bmp == NULL) printf("CreateDIBSection failed! %d \n", GetLastError());

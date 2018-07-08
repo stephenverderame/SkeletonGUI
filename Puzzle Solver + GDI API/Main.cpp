@@ -104,6 +104,7 @@ BOOL CALLBACK ldDialogProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
 			float * data = new float[2];
 			float min, max;
 			if (SendMessage(GetDlgItem(hwnd, IDC_CHECK1), BM_GETCHECK, 0, 0) == BST_CHECKED) {
+				//auto rotate checked
 				int size = GetWindowTextLength(GetDlgItem(hwnd, IDC_EDIT1));
 				char * entryText = new char[size + 1];
 				GetWindowText(GetDlgItem(hwnd, IDC_EDIT1), entryText, size + 1);
@@ -117,6 +118,7 @@ BOOL CALLBACK ldDialogProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
 
 			}
 			else if(SendMessage(GetDlgItem(hwnd, IDC_CHECK3), BM_GETCHECK, 0, 0) == BST_UNCHECKED){
+				//no rotation needed unchecked
 				int size = GetWindowTextLength(GetDlgItem(hwnd, IDC_EDIT3));
 				char * entryText = new char[size + 1];
 				GetWindowText(GetDlgItem(hwnd, IDC_EDIT3), entryText, size + 1);
@@ -126,6 +128,10 @@ BOOL CALLBACK ldDialogProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
 
 			}
 			else {
+				data[0] = -1;
+				data[1] = -7;
+			}
+			if (SendMessage(GetDlgItem(hwnd, IDC_CHECK3), BM_GETCHECK, 0, 0) == BST_CHECKED) {
 				data[0] = -1;
 				data[1] = -7;
 			}
@@ -243,6 +249,28 @@ BOOL CALLBACK ldDialogProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
 	default:
 		return FALSE; //not handled
 	return TRUE;
+	}
+}
+BOOL CALLBACK wordDialogProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
+	switch (msg) {
+	case WM_INITDIALOG:
+	{
+		HICON icon = (HICON)LoadImage(GetModuleHandle(NULL), MAKEINTRESOURCE(ID_ICON), IMAGE_ICON, 16, 16, 0);
+		if (icon)
+			SendMessage(hwnd, WM_SETICON, ICON_SMALL, (LPARAM)icon);
+	}
+	case WM_COMMAND: 
+		if (LOWORD(w) == IDC_FIND_WORDS) {
+			HWND handle = GetDlgItem(hwnd, IDC_WORD_LIST);
+			int txtSize = GetWindowTextLength(handle) + 1;
+			char * buffer = new char[txtSize + 1];
+			GetWindowText(handle, buffer, txtSize);
+			buffer[txtSize] = '\0';
+			display.fireEvent(Event(WM_COMMAND, EventParams((LPARAM)buffer, w)));
+			EndDialog(hwnd, IDC_FIND_WORDS);
+		}
+	default:
+		return FALSE;
 	}
 }
 LRESULT CALLBACK customProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
@@ -418,7 +446,7 @@ int main(){
 	}, WM_SIZE));
 	display.addEventListener(new EventListener([](EventParams ep) {
 		if (LOWORD(ep.getParam3()) == IDM_LOAD_SEARCH) {
-			fileFilter f("Images (.bmp)", { ".bmp" });
+			fileFilter f("Images", { ".bmp", ".jpg", ".png" });
 			std::string path = openFileDialog(&f);
 			if (path.size() > 1) {
 				if (img != nullptr) {
@@ -436,7 +464,7 @@ int main(){
 			}
 		}
 		else if (LOWORD(ep.getParam3()) == IDM_LOAD_MAZE) {
-			fileFilter f("Images (.bmp)", { ".bmp" });
+			fileFilter f("Images", { ".bmp", ".jpg", ".png" });
 			std::string path = openFileDialog(&f);
 			if (path.size() > 1) {
 				if (img != nullptr) {
@@ -521,13 +549,40 @@ int main(){
 			}
 		}
 		else if (LOWORD(ep.getParam3()) == IDM_SOLVE_SEARCH) {
+			addToUndoStack(img);
+			DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_FIND), display, wordDialogProc);			
+		}
+		else if (LOWORD(ep.getParam3()) == IDC_FIND_WORDS) {
+			printf("Called \n");
 			auto list = getCharacterLocations(img);
 			//				augmentDataSet(list, {'T', 'N', 'E', 'R', 'R', 'U', 'C', 'M', 'M', 'A', 'G', 'N', 'E', 'T', 'I', 'S', 'M', 'P'}, img);
 			//				augmentDataSet(list, { 'D', 'N', 'T', 'I', 'G', 'C', 'A', 'J', 'C', 'A', 'O', 'J', 'O', 'H', 'S', 'I', 'E', 'I', 'B', 'A' }, img);
 			//				augmentDataSet(list, { 'H', 'M', 'E', 'G', 'Q', 'T', 'Z', 'M', 'R', 'H', 'Y', 'L', 'S', 'R' }, img);
 			SearchGrid g = identifyLetters(img, list);
-			g.search(img, list, { "MELT" , "REFRACTION", "ALLOY", "SUPERCONDUCTOR"});
-			
+			char * buffer = (char*)ep.getParaml();
+			std::string word;
+			std::vector<std::string> words;
+			printf("Words: \n");
+			char c = buffer[0];
+			int i = 0;
+			int lastDelim = -1;
+			for (i = 0; true; i++) {
+				if (buffer[i] == '\r' || buffer[i] == '\0' || buffer[i] == ';') {
+					char * wd = new char[i - lastDelim];
+					memcpy_s(wd, i - lastDelim - 1, buffer + lastDelim + 1, i - lastDelim - 1);
+					wd[i - lastDelim - 1] = '\0';
+					words.push_back(std::string(wd));
+					printf("%s ", wd);
+					lastDelim = i;
+					while (buffer[lastDelim + 1] == '\r' || buffer[lastDelim + 1] == '\n' || buffer[lastDelim + 1] == ';' || buffer[lastDelim + 1] == ' ') lastDelim++;
+					i = lastDelim;
+					delete[] wd;
+				}
+				if (buffer[i] == '\0') break;
+			}
+			printf("\n");
+			delete[] buffer;
+			g.search(img, list, words);
 		}
 	}, WM_COMMAND));
 	display.addEventListener(new EventListener([](EventParams ep) {

@@ -24,11 +24,8 @@ private:
 	bool rawUpdated;
 	int * integralImage;
 private:
-	void convertToBitmap(const char * fileName);
 	float lerp(float s, float e, float t) { return s + (e - s)*t; }
 	float blerp(float c00, float c10, float c01, float c11, float tx, float ty) { return lerp(lerp(c00, c10, tx), lerp(c01, c11, tx), ty); }
-public:
-	static Image * newImgFrom(Image * img, int x, int y, int width, int height);
 public:
 	Image(const char * file, HWND window = gui::GUI::useWindow());
 	Image(const char * file, int x, int y, HWND window = gui::GUI::useWindow());
