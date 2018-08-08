@@ -124,7 +124,7 @@ std::vector<Square> getCharacterLocations(Image * img)
 			spaceSizes.push_back(i - lastDark);
 			break;
 		}
-		if (accumulator[i] / (float)img->getHeight() < 230) {
+		if (accumulator[i] / (float)img->getHeight() < 235) {
 			if (i - lastDark > 1) {
 				spaces.push_back({ lastDark + 1, i - lastDark });
 				spaceSizes.push_back(i - lastDark);
@@ -230,10 +230,11 @@ std::vector<Square> getCharacterLocations(Image * img)
 		int lastSpace = max(i - 1, 0);
 		if (horzSpaces[i].size <= round(.2 * avgSpaceSize) && abs(horzSpaces[i].start - (horzSpaces[lastSpace].start + horzSpaces[lastSpace].size)) <= round(.3 * avgSpaceSize)) {
 			horzSpaces[lastSpace].size = horzSpaces[i].start + horzSpaces[i].size - horzSpaces[lastSpace].start;
-			spaces[i] = { -1, -1 };
+			horzSpaces[i] = { -1, -1 };
 		}
 	}
-/*	for (Space s : horzSpaces) {
+#ifdef DEBUGGING_SPACE
+	for (Space s : horzSpaces) {
 		printf("Horz Space Size: %d \n", s.size);
 		for (int i = 0; i < img->getWidth(); i++) {
 			for (int y = s.start; y < s.start + s.size; y++) {
@@ -241,13 +242,15 @@ std::vector<Square> getCharacterLocations(Image * img)
 			}
 		}
 	}
-/*	for (Space s : spaces) {
+	for (Space s : spaces) {
 		for (int i = 0; i < img->getHeight(); i++) {
 			for (int x = s.start; x < s.start + s.size; x++) {
 				img->setPixel(x, i, { 0, 0, 255 });
 			}
 		}
-	}*/
+	}
+#endif
+	printf("Next! \n");
 	if (horzSpaces.size() == 0) printf("no spaces!");
 	lastSpaceSize = 0;
 	Space horzEqualSpacing{ -1, -1 };
@@ -279,6 +282,7 @@ std::vector<Square> getCharacterLocations(Image * img)
 		img->setPixel(i, horzEqualSpacing.start + horzEqualSpacing.size, { 255, 0, 0 });
 	}*/
 #pragma endregion
+#ifndef DEBUGGING_SPACE
 	std::vector<Square> characters;
 	for (int x = 0; x < spaces.size(); x++) {
 		if (spaces[x].start + spaces[x].size >= equalSpacing.start && spaces[x].start <= equalSpacing.start + equalSpacing.size) {
@@ -326,11 +330,6 @@ std::vector<Square> getCharacterLocations(Image * img)
 						else done[3] = true;
 						
 					}
-//					Square old = sq;					
-/*					sq.y = changed[1] ? topY : upY;
-					sq.x = changed[2] ? boundLeft : leftX;
-					sq.height = changed[0] ? bottomY - sq.y : downY - sq.y;
-					sq.width = changed[3] ? boundRight - sq.x : rightX - sq.x; */
 					sq.y = upY;
 					sq.height = downY - sq.y;
 					sq.x = leftX;
@@ -342,6 +341,7 @@ std::vector<Square> getCharacterLocations(Image * img)
 			}
 		}
 	}
+#endif
 /*	for (Square s : characters) {
 		for (int i = s.y; i < s.y + s.height; i++) {
 			img->setPixel(s.x, i, { 0, 255, 0 });
@@ -357,10 +357,14 @@ std::vector<Square> getCharacterLocations(Image * img)
 	InvalidateRect(gui::GUI::useWindow(), &r, TRUE);
 	delete[] accumulator;
 	delete[] horzAccumulator;
+#ifndef DEBUGGING_SPACE
 	return characters;
+#else
+	return std::vector<Square>();
+#endif
 }
-#define SAMPLE_WIDTH 5
-#define SAMPLE_HEIGHT 5
+#define SAMPLE_WIDTH 10
+#define SAMPLE_HEIGHT 10
 bool isBmp(char * path) {
 	char * pointer = path;
 	char ending[] = ".bmp";
@@ -398,7 +402,7 @@ SearchGrid identifyLetters(Image * img, std::vector<Square> locations)
 		}
 		if (FindNextFile(hand, &fData) == FALSE) break;
 	}
-	struct stat fInfo;
+/*	struct stat fInfo;
 	if (stat("data.ml", &fInfo) == 0) {
 		std::ifstream file;
 		file.open("data.ml", std::ios::in | std::ios::binary);
@@ -425,12 +429,11 @@ SearchGrid identifyLetters(Image * img, std::vector<Square> locations)
 			file.close();
 			delete data;
 		}
-	}
+	}*/
 	std::multimap<char, channel *> guaranteed;
 	for (int i = 0; i < locations.size(); i++) {
-		std::pair<char, int> minDifference = std::make_pair(0, INT_MAX);
-		Image * letter = new Image("white.bmp");
-		letter->resize(locations[i].width, locations[i].height);
+		std::pair<char, double> minDifference = std::make_pair(0, DBL_MAX);
+		Image * letter = new Image(locations[i].width, locations[i].height);
 		for (int x = 0; x < locations[i].width; x++) {
 			for (int y = 0; y < locations[i].height; y++) {
 				letter->setPixel(x, y, img->getPixel(x + locations[i].x, y + locations[i].y));
@@ -440,83 +443,17 @@ SearchGrid identifyLetters(Image * img, std::vector<Square> locations)
 		letter->scaleTo(SAMPLE_WIDTH, SAMPLE_HEIGHT);
 		if (i == 4) letter->saveBmp("testUnknown.bmp");
 		for (int j = 0; j < letters.size(); j++) {
-			float diffScore = 0;		
-			int blackL = 0;
-			int blackK = 0;
-			float ratio1L, ratio2L, ratio1K, ratio2K;
-			int threshL = letter->integralImageValue(letter->getWidth() - 1, letter->getHeight() - 1) / (float)(SAMPLE_WIDTH * SAMPLE_HEIGHT);
-			int threshK = (*letters[j])->integralImageValue((*letters[j])->getWidth() - 1, (*letters[j])->getHeight() - 1) / (float)(SAMPLE_WIDTH * SAMPLE_HEIGHT);
-			int sqSize = (SAMPLE_WIDTH * SAMPLE_HEIGHT) / 25;
-			int sqWidth = sqrt(sqSize);
-			for (int k = 0; k < 25; k++) {
-				int x = k % 5;
-				int y = k / 5;
-				float lquadScore = 0;
-				float kquadScore = 0;
-				for (int l = 0; l < sqSize; l++) {
-					int x1 = l % sqWidth;
-					int y1 = l / sqWidth;
-					lquadScore += letter->getPixel(x * sqWidth + x1, y * sqWidth + y1).avg();
-					kquadScore += (*letters[j])->getPixel(x * sqWidth + x1, y * sqWidth + y1).avg();
-
-				}
-				lquadScore /= sqSize;
-				kquadScore /= sqSize;
-				diffScore += (kquadScore - lquadScore) * (kquadScore - lquadScore);
-				
-			}
+			double diffScore = 0;
 			for (int k = 0; k < SAMPLE_WIDTH * SAMPLE_HEIGHT; k++) {
 				int x = k % SAMPLE_WIDTH;
 				int y = k / SAMPLE_WIDTH;
-				if (k == floor((SAMPLE_WIDTH * SAMPLE_HEIGHT) / 2.0)) {
-					ratio1L = blackL / (float)(floor((SAMPLE_WIDTH * SAMPLE_HEIGHT) / 2.0) - blackL);
-					ratio1K = blackK / (float)(floor((SAMPLE_WIDTH * SAMPLE_HEIGHT) / 2.0) - blackK);
-					blackL = 0;
-					blackK = 0;
-				}
-				else if (k == SAMPLE_WIDTH * SAMPLE_HEIGHT - 1) {
-					ratio2L = blackL / (float)(ceil((SAMPLE_WIDTH * SAMPLE_HEIGHT) / 2.0) - blackL);
-					ratio2K = blackK / (float)(ceil((SAMPLE_WIDTH * SAMPLE_HEIGHT) / 2.0) - blackK);
-				}
-				blackL += letter->getPixel(x, y).avg() < threshL ? 1 : 0;
-				blackK += (*letters[j])->getPixel(x, y).avg() < threshK ? 1 : 0;
+				diffScore += pow(letter->getPixel(x, y).avg() - letters[j]->image->getPixel(x, y).avg(), 2);
 			}
-			std::vector<double> widthL, heightL, widthK, heightK;
-			for (int k = 0; k < SAMPLE_WIDTH; k++) {
-				widthL.push_back(letter->getPixel(round(SAMPLE_HEIGHT / 2.0), k).avg() < threshL ? 1 : 0);
-				heightL.push_back(letter->getPixel(k, round(SAMPLE_WIDTH / 2.0)).avg() < threshL ? 1 : 0);
-				widthK.push_back((*letters[j])->getPixel(round(SAMPLE_HEIGHT / 2.0), k).avg() < threshL ? 1 : 0);
-				heightK.push_back((*letters[j])->getPixel(k, round(SAMPLE_WIDTH / 2.0)).avg() < threshL ? 1 : 0);
-			}
-			int mins[] =  { INT_MAX, INT_MAX, INT_MAX, INT_MAX };
-			int maxes[] = { INT_MIN, INT_MIN, INT_MIN, INT_MIN };
-			for (int k = 0; k < SAMPLE_WIDTH; k++) {
-				if (widthL[k]) {
-					min(mins[0], k);
-					max(maxes[0], k);
-				}
-				if (widthK[k]) {
-					min(mins[1], k);
-					max(maxes[1], k);
-				}
-				if (heightL[k]) {
-					min(mins[2], k);
-					max(maxes[2], k);
-				}
-				if (heightK[k]) {
-					min(mins[3], k);
-					max(maxes[3], k);
-				}
-			}
-			diffScore += (ratio1L - ratio1K) * (ratio1L - ratio1K) + (ratio2L - ratio2K) * (ratio2L - ratio2K);
-			diffScore += (((maxes[0] - mins[0]) / (maxes[2] - mins[2])) - ((maxes[1] - mins[1]) / (maxes[3] - mins[3])) * (((maxes[0] - mins[0]) / (maxes[2] - mins[2])) - ((maxes[1] - mins[1]) / (maxes[3] - mins[3]))));
-			if (diffScore < minDifference.second) {
-				minDifference.first = letters[j]->letter;
-				minDifference.second = diffScore;
-			}
+			if (diffScore < minDifference.second)
+				minDifference = std::make_pair(letters[j]->letter, diffScore);
 		}
 		grid.addLetter(minDifference.first, locations[i].x, locations[i].y);
-		if (minDifference.second < 81000 && minDifference.second > 100) {
+/*		if (minDifference.second < 81000 && minDifference.second > 100) {
 			//almost gaurunteed match
 			channel * data = new channel[25];
 			int sum = 0;
@@ -529,10 +466,10 @@ SearchGrid identifyLetters(Image * img, std::vector<Square> locations)
 			guaranteed.insert(std::make_pair(minDifference.first, data));
 			printf("Insert %c with %d \n", minDifference.first, sum);
 
-		}
+		}*/
 		delete letter;
 	}
-	if (guaranteed.size() > 0) {
+/*	if (guaranteed.size() > 0) {
 		channel * data = new channel[26 * guaranteed.size()];
 		int i = 0;
 		for (auto it = guaranteed.begin(); it != guaranteed.end(); it++) {
@@ -570,7 +507,7 @@ SearchGrid identifyLetters(Image * img, std::vector<Square> locations)
 			}
 			else printf("Could not open for writing \n");
 		}
-	}
+	}*/
 	for (int i = 0; i < letters.size(); i++)
 		delete letters[i];
 	grid.iterateRowbyRow();
@@ -580,148 +517,148 @@ SearchGrid identifyLetters(Image * img, std::vector<Square> locations)
  {
 	 std::map<std::string, int> foundWords;
 	 std::map<std::string, Line> foundWordsPos;
-	 printf("testGetLetter: %c \n", getLetter(maxColumns, maxRows));
+	 printf("testGetLetters: %c %c %c \n", getLetter(maxColumns, maxRows), getLetter(maxColumns - 1, maxRows - 1), getLetter(maxColumns - 2, maxRows - 2));
 	 for (std::string word : words) {
+		 std::vector<std::string> possibilities;
+		 std::vector<Line> lines;
 		 for (int i = 0; i < (maxRows + 1) * (maxColumns + 1); i++) {
-			 int x = i / (maxRows + 1);
-			 int y = i % (maxRows + 1);
+			 int x = i / (maxColumns + 1);
+			 int y = i % (maxColumns + 1);
 			 Letter letter = *letters[i];
-			 std::vector<std::string> possibilities;
-			 std::vector<Line> lines;
 			 for (int j = 0; j < word.size(); j++) {
 				 if (letter == word[j]) {
-					 if (x <= (maxColumns + 1) - (word.size() - j)) {
+					 if (/*x <= (maxColumns + 1) - (word.size() - j)*/ true) {
 						 Line l;
 						 l.start = { x - j, y };
 						 l.end = {  x + (int)word.size() - j - 1, y };
 						 if (!l.outOfBounds(maxRows + 1, maxColumns + 1)) {
-							 std::string p = "";
+							 std::stringstream p;
 							 for (int k = -j; k < word.size() - j; k++) {
-								 p += getLetter(x + k, y);
+								 p << getLetter(x + k, y);
 							 }
-							 possibilities.push_back(p);
+							 possibilities.push_back(p.str());
 							 lines.push_back(l);
 						 }
 					 }
-					 if (y <= (maxRows + 1) - (word.size() - j)) {
+					 if (/*y <= (maxRows + 1) - (word.size() - j)*/ true) {
 						 Line l;
-						 std::string s = "";
+						 std::stringstream s;
 						 l.start = { x, y - j };
 						 l.end = { x, y + (int)word.size() - j - 1 };
 						 if (!l.outOfBounds(maxRows + 1, maxColumns + 1)) {
 							 for (int k = -j; k < word.size() - j; k++) {
-								 s += getLetter(x, y + k);
+								 s << getLetter(x, y + k);
 							 }
-							 possibilities.push_back(s);
+							 possibilities.push_back(s.str());
 							 lines.push_back(l);
 						 }
 					 }
 #pragma region diagnol
-					 if (x <= (maxColumns + 1) - (word.size() - j) && y + 1 >= word.size() - j) {
+					 if (/*x <= (maxColumns + 1) - (word.size() - j) && y + 1 >= word.size() - j*/ true) {
 						 Line l;
-						 std::string s = "";
+						 std::stringstream s;
 						 l.start = { x - j, y + j };
 						 l.end = { x + (int)word.size() - j - 1, y - ((int)word.size() - j - 1)};
 						 if (!l.outOfBounds(maxRows + 1, maxColumns + 1)) {
 							 for (int k = -j; k < word.size() - j; k++) {
-								 s += getLetter(x + k, y - k);
+								 s << getLetter(x + k, y - k);
 							 }
-							 possibilities.push_back(s);
+							 possibilities.push_back(s.str());
 							 lines.push_back(l);
 						 }
 					 }
-					 if (x <= (maxColumns + 1) - (word.size() - j) && y <= maxRows - (word.size() - j)) {
+					 if (/*x <= (maxColumns + 1) - (word.size() - j) && y <= maxRows - (word.size() - j) */ true) {
 						 Line l;
-						 std::string s = "";
+						 std::stringstream s;
 						 l.start = { x - j, y - j };
 						 l.end = { x + (int)word.size() - j - 1, y + (int)word.size() - j - 1 };
 						 if (!l.outOfBounds(maxRows + 1, maxColumns + 1)) {
 							 for (int k = -j; k < word.size() - j; k++) {
-								 s += getLetter(x + k, y + k);
+								 s << getLetter(x + k, y + k);
 							 }
-							 possibilities.push_back(s);
+							 possibilities.push_back(s.str());
 							 lines.push_back(l);
 						 }
 					 }
-					 if (x + 1 >= word.size() - j  && y + 1 >= word.size() - j) {
+					 if (/*x + 1 >= word.size() - j  && y + 1 >= word.size() - j*/ true) {
 						 Line l;
-						 std::string s = "";
+						 std::stringstream s;
 						 l.start = { x + j, y + j };
 						 l.end = { x - ((int)word.size() - j - 1), y - ((int)word.size() - j - 1) };
 						 if (!l.outOfBounds(maxRows + 1, maxColumns + 1)) {
 							 for (int k = -j; k < word.size() - j; k++) {
-								 s += getLetter(x - k, y - k);
+								 s << getLetter(x - k, y - k);
 							 }
-							 possibilities.push_back(s);
+							 possibilities.push_back(s.str());
 							 lines.push_back(l);
 						 }
 					 }
-					 if (x + 1 >= word.size() - j && y <= (maxRows + 1) - (word.size() - j)) {
+					 if (/*x + 1 >= word.size() - j && y <= (maxRows + 1) - (word.size() - j)*/ true) {
 						 Line l;
-						 std::string s = "";
+						 std::stringstream s;
 						 l.start = { x + j, y - j };
 						 l.end = { x - ((int)word.size() - j - 1), y + (int)word.size() - j - 1 };
 						 if (!l.outOfBounds(maxRows + 1, maxColumns + 1)) {
 							 for (int k = -j; k < word.size() - j; k++) {
-								 s += getLetter(x - k, y + k);
+								 s << getLetter(x - k, y + k);
 							 }
-							 possibilities.push_back(s);
+							 possibilities.push_back(s.str());
 							 lines.push_back(l);
 						 }
 					 }
 #pragma endregion
-					 if (x + 1 >= word.size() - j) {
+					 if (/*x + 1 >= word.size() - j*/ true) {
 						 Line l;
-						 std::string s = "";
+						 std::stringstream s;
 						 l.start = { x + j, y };
 						 l.end = { x - ((int)word.size() - j - 1), y };
 						 if (!l.outOfBounds(maxRows + 1, maxColumns + 1)) {
 							 for (int k = -j; k < word.size() - j; k++) {
-								 s += getLetter(x - k, y);
+								 s << getLetter(x - k, y);
 							 }
-							 possibilities.push_back(s);
+							 possibilities.push_back(s.str());
 							 lines.push_back(l);
 						 }
 					 }
-					 if (y + 1 >= word.size() - j) {
+					 if (/*y + 1 >= word.size() - j*/ true) {
 						 Line l;
-						 std::string s = "";
+						 std::stringstream s;
 						 l.start = { x, y + j };
 						 l.end = { x, y - ((int)word.size() - j - 1) };
 						 if (!l.outOfBounds(maxRows + 1, maxColumns + 1)) {
 							 for (int k = -j; k < word.size() - j; k++) {
-								 s += getLetter(x, y - k);
+								 s << getLetter(x, y - k);
 							 }
-							 possibilities.push_back(s);
+							 possibilities.push_back(s.str());
 							 lines.push_back(l);
 						 }
 					 }
 					 
 				 }
 			 }
-			 std::pair<int, int> maxSame = std::make_pair(0, INT_MIN);
-			 for (int j = 0; j < possibilities.size(); j++) {
-				 int same = 0;
-				 for (int k = 0; k < word.size(); k++) {
-					 if (word[k] == possibilities[j][k])
-						 same++;
-				 }
-				 if (same > maxSame.second)
-					 maxSame = std::make_pair(j, same);
-			 }
-			 if (maxSame.second != INT_MIN && possibilities.size() > 0) {
-				 if (foundWords.find(word) != foundWords.end()) {
-					 if (foundWords.at(word) < maxSame.second) {
-						 foundWords[word] = maxSame.second;
-						 foundWordsPos[word] = lines[maxSame.first];
-					 }
-				 }
-				 else {
-					 foundWords.insert(std::make_pair(word, maxSame.second));
-					 foundWordsPos.insert(std::make_pair(word, lines[maxSame.first]));
-				 }
-			 }
-		 }
+/**/	}
+		std::pair<int, int> maxSame = std::make_pair(0, round(word.size() * 0.3));
+		for (int j = 0; j < possibilities.size(); j++) {
+			int same = 0;
+			for (int k = 0; k < word.size(); k++) {
+				if (word[k] == possibilities[j][k])
+					same++;
+			}
+			if (same > maxSame.second)
+				maxSame = std::make_pair(j, same);
+		}
+		if (maxSame.second != INT_MIN && possibilities.size() > 0) {
+			if (foundWords.find(word) != foundWords.end()) {
+				if (foundWords.at(word) < maxSame.second) {
+					foundWords[word] = maxSame.second;
+					foundWordsPos[word] = lines[maxSame.first];
+				}
+			}
+			else {
+				foundWords.insert(std::make_pair(word, maxSame.second));
+				foundWordsPos.insert(std::make_pair(word, lines[maxSame.first]));
+			}
+		}
 	 }
 	 for (auto it = foundWordsPos.begin(); it != foundWordsPos.end(); it++) {
 		 printf("Found word: %s Score: %d / %d \n", it->first.c_str(), foundWords[it->first], it->first.size());
@@ -734,7 +671,7 @@ SearchGrid identifyLetters(Image * img, std::vector<Square> locations)
 		 printf("Which is (%d, %d) to (%d, %d) \n", line.start.x, line.start.y, line.end.x, line.end.y);
 		 double dist = sqrt((endpt.x - startpt.x) * (endpt.x - startpt.x) + (endpt.y - startpt.y) * (endpt.y - startpt.y));
 		 double theta = acos((endpt.x - startpt.x) / dist);
-		 if (line.start.x != line.end.x || (line.start.x == line.end.x && line.start.y > line.end.y)) theta *= -1;
+		 if ((line.start.x != line.end.x && line.start.y > line.end.y) || (line.start.x == line.end.x && line.start.y > line.end.y)) theta *= -1;
 		 float matrix[] = {
 			 cos(theta),	-sin(theta),
 			 sin(theta),	 cos(theta)
@@ -752,6 +689,23 @@ SearchGrid identifyLetters(Image * img, std::vector<Square> locations)
 	 GetClientRect(gui::GUI::useWindow(), &r);
 	 InvalidateRect(gui::GUI::useWindow(), &r, TRUE);
  }
+ void SearchGrid::copyFrom(SearchGrid g)
+ {
+	 if (letters.size() > 0) {
+		 for (int i = 0; i < letters.size(); i++)
+			 delete letters[i];
+		 letters.erase(letters.begin(), letters.end());
+	 }
+	 for (auto l : g.letters) {
+		 letters.push_back(new Letter(*l));
+	 }
+	 lastRow = g.lastRow;
+	 lastColumn = g.lastColumn;
+	 maxRows = g.maxRows;
+	 maxColumns = g.maxColumns;
+	 row0Y = g.row0Y;
+	 column0X = g.column0X;
+ }
  void augmentDataSet(std::vector<Square> locations, std::vector<char> knowns, Image * img, int firstKnown)
  {
 	 int size = min(locations.size(), firstKnown + knowns.size());
@@ -766,7 +720,7 @@ SearchGrid identifyLetters(Image * img, std::vector<Square> locations)
 		 srand(clock());
 		 int id = rand() % 1000;
 		 sprintf_s(path, MAX_PATH, "C:\\Users\\stephen\\Documents\\Visual Studio 2015\\Projects\\Puzzle Solver + GDI API\\Puzzle Solver + GDI API\\letters\\%c %drw.bmp", knowns[i], id);
-		 image->scaleTo(5, 5);
+		 image->scaleTo(SAMPLE_WIDTH, SAMPLE_HEIGHT);
 		 image->saveBmp(path);
 	 }
  }
@@ -1012,7 +966,7 @@ void SearchGrid::addLetter(char c, int x, int y)
 				printf("IDK how to handle this row \n");
 		}
 
-		if (abs(lastColumn.second - x) < 5) {
+		if (abs(lastColumn.second - x) < 10) {
 			currentColumn = lastColumn.first;
 //			printf("Current column \n");
 		}
@@ -1023,13 +977,13 @@ void SearchGrid::addLetter(char c, int x, int y)
 //			printf("Column greater: %d \n", currentColumn);
 		}
 		else if (x < lastColumn.second) {
-//			if (abs(x - column0X) < 5) {
+			if (abs(x - column0X) < 10) {
 				lastColumn = std::make_pair(0, column0X);
 				currentColumn = 0;
 //				printf("Column reset \n");
-//			}
-//			else
-//				printf("IDK column \n");
+			}
+			else
+				printf("IDK column \n");
 		}
 //		printf("%d %d \n", currentRow, currentColumn);
 		letters.push_back(new Letter{ currentRow, currentColumn, c });

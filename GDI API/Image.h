@@ -42,6 +42,7 @@ public:
 	void setPosition(int x, int y);
 	void setConstrains(int forcedWidth, int forcedHeight) { this->forcedWidth = forcedWidth; this->forcedHeight = forcedHeight; }
 	void toMonochrome();
+	void toGreyscale();
 	int getForcedWidth() { return forcedWidth; }
 	int getForcedHeight() { return forcedHeight; }
 	int getX() { return x; }
@@ -68,5 +69,6 @@ public:
 	~ImgPtr() { delete img; }
 	ImgPtr(Image * img) : img(img) {};
 	ImgPtr() : img(nullptr) {};
+	Image * data() { return img; }
 };
 Color biLerp(POINT * points, Image * source, POINT p);

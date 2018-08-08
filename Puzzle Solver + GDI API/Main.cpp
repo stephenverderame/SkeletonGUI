@@ -33,6 +33,10 @@ HCURSOR cursors[4];
 int currentCursor = 0;
 POINT origin;
 HWND ldModelessDialog;
+SearchGrid read;
+std::vector<Square> readLocations;
+POINT mouse;
+bool viewRead = false;
 #define CURSOR_NORMAL 0
 #define CURSOR_WAIT 1
 #define CURSOR_DRAW 2
@@ -393,10 +397,49 @@ LRESULT CALLBACK customProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
 		EndPaint(hwnd, &paint);
 		return TRUE;
 	}
+	if (msg == WM_PAINT && viewRead) {
+		std::pair<int, int> dims = read.getDimensions();
+		double minDistance = DBL_MAX;
+		int loc = 0;
+		for (int i = 0; i < (dims.first + 1) * (dims.second + 1); i++) {
+			double dist = sqrt(pow(readLocations[i].x + (readLocations[i].width / 2) - mouse.x, 2) + pow(readLocations[i].y + (readLocations[i].height / 2) - mouse.y, 2));
+			if (dist < minDistance) {
+				minDistance = dist;
+				loc = i;
+			}
+		}
+		PAINTSTRUCT paint;
+		HDC dc = BeginPaint(display, &paint);
+		display.getCanvas()->draw(dc);
+		HPEN pen = CreatePen(PS_SOLID, 1, RGB(0, 255, 0));
+		HPEN oldPen = (HPEN)SelectObject(GetDC(display), pen);
+		HBRUSH oldBrush = (HBRUSH)SelectObject(GetDC(display), GetStockBrush(NULL_BRUSH));
+		int y = readLocations[loc].y + readLocations[loc].height;
+		MoveToEx(dc, readLocations[loc].x, y, NULL);
+		LineTo(dc, readLocations[loc].x, y + readLocations[loc].height);
+		LineTo(dc, readLocations[loc].x + readLocations[loc].width, y + readLocations[loc].height);
+		LineTo(dc, readLocations[loc].x + readLocations[loc].width, y);
+		LineTo(dc, readLocations[loc].x, y);
+		SelectObject(dc, oldBrush);
+		SelectObject(dc, oldPen);
+		DeleteObject(pen);
+		SwapBuffers(dc);
+		EndPaint(display, &paint);
+		Statusbar * status = (Statusbar*)mainPage->getCurrentPage()->getControl("letterBar");
+		std::string text = "";
+		text += read.getLetter(loc)->letter;
+		status->setText(text.c_str(), 0);
+	}
 	if (msg == WM_MOUSEMOVE && crop) {
 		RECT r;
 		GetClientRect(display, &r);
 		InvalidateRect(display, &r, FALSE);
+	}
+	else if (msg == WM_MOUSEMOVE && viewRead) {
+		mouse = { GET_X_LPARAM(l), GET_Y_LPARAM(l) };
+		RECT r;
+		GetClientRect(display, &r);
+		InvalidateRect(display, &r, TRUE);
 	}
 	return 0;
 }
@@ -410,13 +453,14 @@ int main(){
 	display.setWindowProperty(menuName, update);
 	display.setWindowProperty(icon, update);
 	display.createWindow(300, 300, 800, 800);
-	GUI::bindWindow(display); 
+	GUI::bindWindow(display);
 	int sections[] = { 100, -1 };
 	Page * p1 = new Page("Page 1", {
 		new Scrollbar("testScroll", 10, display.getDimensions().height - 20, display.getDimensions().width - 20, 10, 100, scrollHorz, SBS_HORZ),
 		new Scrollbar("scrollVert", display.getDimensions().width - 10, 0, 10, display.getDimensions().height, 100, scrollVert, SBS_VERT),
 		new Progressbar("progress", 10, display.getDimensions().height - 20, display.getDimensions().width - 20, 20, 0, 100),
-		new Toolbar("toolbar", {new ToolbarControls{IDT_UNDO, gui::tbm_undo}})
+		new Toolbar("toolbar", {new ToolbarControls{IDT_UNDO, gui::tbm_undo}}),
+		new Statusbar("letterBar", 1, sections)
 	});
 	p1->setLayout(new AbsoluteLayout());
 	mainPage = new MainPage({
@@ -427,6 +471,7 @@ int main(){
 	p->setMarquee(true);
 	p->hideComponent();
 	Toolbar * t = (Toolbar*)p1->getControl("toolbar");
+	p1->getControl("letterBar")->hideComponent();
 #pragma region eventHandling
 	Scrollbar * scroll = (Scrollbar*)mainPage->getCurrentPage()->getControl("testScroll");
 	scroll->setScrollMessages([](int changePos) {
@@ -445,7 +490,7 @@ int main(){
 		mainPage->handleMessage(&m);
 	}, WM_SIZE));
 	display.addEventListener(new EventListener([](EventParams ep) {
-		if (LOWORD(ep.getParam3()) == IDM_LOAD_SEARCH) {
+		if (LOWORD(ep.getParam3()) == IDM_LOAD) {
 			fileFilter f("Images", { ".bmp", ".jpg", ".png" });
 			std::string path = openFileDialog(&f);
 			if (path.size() > 1) {
@@ -456,48 +501,46 @@ int main(){
 				}
 				img = new Image(path.c_str(), 0, 20);
 				display.drawImage(img);
-				img->toMonochrome();
+				//				img->toMonochrome();
+				//				img->toGreyscale();
 				Scrollbar * scroll = (Scrollbar*)mainPage->getCurrentPage()->getControl("testScroll");
 				scroll->update(max(img->getWidth() - display.getDimensions().width, 2));
 				scroll = (Scrollbar*)mainPage->getCurrentPage()->getControl("scrollVert");
 				scroll->update(max(img->getHeight() - display.getDimensions().height, 2));
 			}
 		}
-		else if (LOWORD(ep.getParam3()) == IDM_LOAD_MAZE) {
-			fileFilter f("Images", { ".bmp", ".jpg", ".png" });
-			std::string path = openFileDialog(&f);
-			if (path.size() > 1) {
-				if (img != nullptr) {
-					addToUndoStack(img);
-					display.deleteImage(img);
-					delete img;
-				}
-				img = new Image(path.c_str(), 0, 20);
-				display.drawImage(img);
-				Scrollbar * scroll = (Scrollbar*)mainPage->getCurrentPage()->getControl("testScroll");
-				scroll->update(max(img->getWidth() - display.getDimensions().width, 2));
-				scroll = (Scrollbar*)mainPage->getCurrentPage()->getControl("scrollVert");
-				scroll->update(max(img->getHeight() - display.getDimensions().height, 2));
+		else if (LOWORD(ep.getParam3()) == IDM_MONOCHROME) {
+			if (img != nullptr) {
+				img->toMonochrome();
+				RECT r;
+				GetClientRect(display, &r);
+				InvalidateRect(display, &r, TRUE);
 			}
 		}
 		else if (LOWORD(ep.getParam3()) == IDM_SAVE) {
-			std::string path = saveFileDialog();
-			if (path.size() > 1) {
-				if (img != nullptr)
+			if (img != nullptr) {
+				std::string path = saveFileDialog();
+				if (path.size() > 1) {
 					img->saveBmp(path.c_str());
+				}
 			}
 		}
 		else if (LOWORD(ep.getParam3()) == IDM_CROP) {
-			crop = true;
-			showFinal = false;
-			currentCursor = CURSOR_SELECT;
+			if (img != nullptr) {
+				crop = true;
+				showFinal = false;
+				currentCursor = CURSOR_SELECT;
+			}
 		}
 		else if (LOWORD(ep.getParam3()) == IDM_ROTATE) {
-			addToUndoStack(img);
-			origin = getOrigin(img);
-			//				int ret = DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_LOAD), display, ldDialogProc);
-			ldModelessDialog = CreateDialog(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_LOAD), display, ldDialogProc);
-			ShowWindow(ldModelessDialog, SW_SHOW);
+			if (img != nullptr) {
+				printf("Rotate! \n");
+				addToUndoStack(img);
+				origin = getOrigin(img);
+				//				int ret = DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_LOAD), display, ldDialogProc);
+				ldModelessDialog = CreateDialog(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_LOAD), display, ldDialogProc);
+				ShowWindow(ldModelessDialog, SW_SHOW);
+			}
 		}
 		else if (LOWORD(ep.getParam3()) == IDM_SOLVE_MAZE) {
 			if (img != nullptr) {
@@ -549,16 +592,28 @@ int main(){
 			}
 		}
 		else if (LOWORD(ep.getParam3()) == IDM_SOLVE_SEARCH) {
-			addToUndoStack(img);
-			DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_FIND), display, wordDialogProc);			
+			if (img != nullptr) {
+				addToUndoStack(img);
+				DialogBox(GetModuleHandle(NULL), MAKEINTRESOURCE(IDD_FIND), display, wordDialogProc);
+			}
+		}
+		else if (LOWORD(ep.getParam3()) == IDM_VIEW_READ) {
+			if (img != nullptr) {
+				viewRead = !viewRead;
+				if (viewRead)
+					mainPage->getCurrentPage()->getControl("letterBar")->showComponent();
+				else
+					mainPage->getCurrentPage()->getControl("letterBar")->hideComponent();
+			}
 		}
 		else if (LOWORD(ep.getParam3()) == IDC_FIND_WORDS) {
-			printf("Called \n");
-			auto list = getCharacterLocations(img);
+			readLocations = getCharacterLocations(img);
+			//augmentDataSet(readLocations, { 'C', 'A', 'T', 'S', 'L', 'B', 'H', 'O', 'L', 'R', 'P', 'R', 'E', 'A', 'L', 'L', 'L', 'B', 'U', 'N', 'C', 'K', 'S', 'I' }, img);
 			//				augmentDataSet(list, {'T', 'N', 'E', 'R', 'R', 'U', 'C', 'M', 'M', 'A', 'G', 'N', 'E', 'T', 'I', 'S', 'M', 'P'}, img);
 			//				augmentDataSet(list, { 'D', 'N', 'T', 'I', 'G', 'C', 'A', 'J', 'C', 'A', 'O', 'J', 'O', 'H', 'S', 'I', 'E', 'I', 'B', 'A' }, img);
 			//				augmentDataSet(list, { 'H', 'M', 'E', 'G', 'Q', 'T', 'Z', 'M', 'R', 'H', 'Y', 'L', 'S', 'R' }, img);
-			SearchGrid g = identifyLetters(img, list);
+#ifndef DEBUGGING_SPACE
+			read.copyFrom(identifyLetters(img, readLocations));
 			char * buffer = (char*)ep.getParaml();
 			std::string word;
 			std::vector<std::string> words;
@@ -582,7 +637,8 @@ int main(){
 			}
 			printf("\n");
 			delete[] buffer;
-			g.search(img, list, words);
+			read.search(img, readLocations, words);
+#endif
 		}
 	}, WM_COMMAND));
 	display.addEventListener(new EventListener([](EventParams ep) {

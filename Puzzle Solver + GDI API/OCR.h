@@ -10,6 +10,7 @@
 #include <time.h>
 #include <map>
 #include <algorithm>
+//#define DEBUGGING_SPACE
 struct Square {
 	int x;
 	int y;
@@ -69,6 +70,7 @@ public:
 	Letter * getLetter(int i) { return letters[i]; }
 	char getLetter(int columns, int rows) { if (rows > maxRows || rows < 0 || columns > maxColumns || columns < 0) return '-'; return letters[columns * (maxRows + 1) + rows]->letter; }
 	void search(Image * img, std::vector<Square> locations, std::vector<std::string> words);
+	void copyFrom(SearchGrid g);
 };
 struct CharacterFeatures {
 	int elbow1;

@@ -225,6 +225,19 @@ void Image::toMonochrome()
 
 }
 
+void Image::toGreyscale()
+{
+	for (int i = 0; i < width * height; i++) {
+		int x = i % width;
+		int y = i / width;
+		Color c = getPixel(x, y);
+		if (c.r + c.b + (int)c.g > 384)
+			setPixel(x, y, { 255, 255, 255 });
+		else
+			setPixel(x, y, { 0, 0, 0 });
+	}
+}
+
 int Image::integralImageValue(int x, int y)
 {
 	if (integralImage == nullptr) {
@@ -489,7 +502,6 @@ Image * Image::scale(int width, int height)
 	}
 	return img;
 }
-
 Color biLerp(POINT * points, Image * source, POINT p)
 {
 	Color pColor;

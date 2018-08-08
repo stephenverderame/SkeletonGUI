@@ -1,6 +1,8 @@
 #pragma once
 #include "window.h"
 #include "glad.h"
+#include <sstream>
+#define SHADER_RESOURCE 0x890
 #define GLW_CHOOSE_PIXEL_FAIL 0x100
 #define GLW_SET_PIXEL_FAIL 0x200
 #define GLW_MAKE_CONTEXT_FAIL 0x300
@@ -29,4 +31,19 @@ public:
 	void enableDefaultErase(bool defErase) { this->defErase = defErase; }
 	inline HDC getDc() { return hdc; }
 	inline HGLRC getRc() { return hrc; }
-}; 
+};
+class GLShader {
+private:
+	unsigned int program;
+private:
+	void loadProgram(std::string vertexCode, std::string fragmentCode, std::string geometryCode = "", FILE * errstream = stderr);
+public:
+	GLShader(const char * vertexPath, const char * fragmentPath, const char * geometryPath = nullptr);
+	GLShader(int vertexResource, int fragmentResource, int geometryResource = -1, int resourceType = SHADER_RESOURCE);
+	inline void use() { glUseProgram(program); }
+	inline void setInt(char * varName, int val) { glUniform1i(glGetUniformLocation(program, varName), val); }
+	inline void setFloat(char * varName, float val) { glUniform1f(glGetUniformLocation(program, varName), val); }
+	inline void setVec3(char * varName, float a, float b, float c) { glUniform3f(glGetUniformLocation(program, varName), a, b, c); }
+	inline void setMat4(char * varName, float * matrix) { glUniformMatrix4fv(glGetUniformLocation(program, varName), 1, GL_FALSE, matrix); }
+	operator GLuint() { return program; }
+};

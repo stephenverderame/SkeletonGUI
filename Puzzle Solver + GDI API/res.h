@@ -3,13 +3,14 @@
 #define ID_CURSOR_PEN 301
 #define ID_ICON 201
 #define ID_MENU 101
-#define IDM_LOAD_MAZE 111
+#define IDM_MONOCHROME 111
 #define IDM_SAVE 121
 #define IDM_CROP 131
 #define IDM_SOLVE_MAZE 141
-#define IDM_LOAD_SEARCH 151
+#define IDM_LOAD 151
 #define IDM_SOLVE_SEARCH 161
 #define IDM_ROTATE 171
+#define IDM_VIEW_READ 181
 
 #define LETTER 573
 #define ID_A 574

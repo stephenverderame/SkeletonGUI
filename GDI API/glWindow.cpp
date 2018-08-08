@@ -63,3 +63,95 @@ void GLWindow::repaint()
 	GetClientRect(window, &r);
 	InvalidateRect(window, &r, TRUE);
 }
+
+void GLShader::loadProgram(std::string vertexCode, std::string fragmentCode, std::string geometryCode, FILE * errstream)
+{
+	unsigned int vs, fs, gs;
+	const char * vcode = vertexCode.c_str(), *fcode = fragmentCode.c_str();
+	int ret;
+	char infoLog[512];
+	vs = glCreateShader(GL_VERTEX_SHADER);
+	glShaderSource(GL_VERTEX_SHADER, 1, &vcode, NULL);
+	glCompileShader(vs);
+	glGetShaderiv(vs, GL_COMPILE_STATUS, &ret);
+	if (!ret) {
+		glGetShaderInfoLog(vs, 512, NULL, infoLog);
+		fprintf(errstream, "Error compiling vertex shader: %s", infoLog);
+	}
+
+	fs = glCreateShader(GL_FRAGMENT_SHADER);
+	glShaderSource(GL_FRAGMENT_SHADER, 1, &fcode, NULL);
+	glCompileShader(fs);
+	glGetShaderiv(fs, GL_COMPILE_STATUS, &ret);
+	if (!ret) {
+		glGetShaderInfoLog(fs, 512, NULL, infoLog);
+		fprintf(errstream, "Error compiling fragment shader: %s", infoLog);
+	}
+
+	if (geometryCode.size() > 1) {
+		gs = glCreateShader(GL_FRAGMENT_SHADER);
+		glShaderSource(GL_FRAGMENT_SHADER, 1, &fcode, NULL);
+		glCompileShader(gs);
+		glGetShaderiv(gs, GL_COMPILE_STATUS, &ret);
+		if (!ret) {
+			glGetShaderInfoLog(gs, 512, NULL, infoLog);
+			fprintf(errstream, "Error compiling geometry shader: %s", infoLog);
+		}
+	}
+
+	program = glCreateProgram();
+	glAttachShader(program, vs);
+	glAttachShader(program, fs);
+	if (geometryCode.size() > 1) glAttachShader(program, gs);
+	glLinkProgram(program);
+	glGetProgramiv(program, GL_LINK_STATUS, &ret);
+	if (!ret)
+	{
+		glGetProgramInfoLog(this->program, 512, NULL, infoLog);
+		fprintf(errstream, "Error linking shader program: %s", infoLog);
+	}
+}
+
+GLShader::GLShader(const char * vertexPath, const char * fragmentPath, const char * geometryPath)
+{
+	std::string vs, fs, gs;
+	std::stringstream buffer;
+	std::ifstream reader;
+	reader.open(vertexPath);
+	if (reader.is_open()) {
+		buffer << reader.rdbuf();
+		vs = buffer.str();
+		buffer.clear();
+		reader.close();
+	}
+	reader.open(fragmentPath);
+	if (reader.is_open()) {
+		buffer << reader.rdbuf();
+		fs = buffer.str();
+		buffer.clear();
+		reader.close();
+	}
+	if (geometryPath != nullptr) {
+		reader.open(geometryPath);
+		if (reader.is_open()) {
+			buffer << reader.rdbuf();
+			gs = buffer.str();
+			buffer.clear();
+			reader.close();
+		}
+		loadProgram(vs, fs, gs);
+	}
+	else loadProgram(vs, fs);
+}
+
+GLShader::GLShader(int vertexResource, int fragmentResource, int geometryResource, int resourceType)
+{
+	gui::Resource v = gui::GUI::loadResource(vertexResource, resourceType);
+	gui::Resource f = gui::GUI::loadResource(fragmentResource, resourceType);
+	if (geometryResource != -1) {
+		gui::Resource g = gui::GUI::loadResource(geometryResource, resourceType);
+		loadProgram(v.data, f.data, g.data);
+	}
+	else
+		loadProgram(v.data, f.data);
+}

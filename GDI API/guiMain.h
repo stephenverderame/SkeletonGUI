@@ -225,6 +225,11 @@ namespace gui {
 		void setText(char * text) {
 			SetWindowText(handle, text);
 		}
+		void addText(char * text) {
+			SendMessage(handle, EM_SETSEL, 0, -1);
+			SendMessage(handle, EM_SETSEL, -1, -1);
+			SendMessage(handle, EM_REPLACESEL, 0, (LPARAM)text);
+		}
 		std::string getText() {
 			size_t size = GetWindowTextLength(handle);
 			char * text = new char[size + 1];
