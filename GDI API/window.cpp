@@ -126,6 +126,11 @@ Window::Window(char * name, int style)
 
 
 }
+Window::Window(HWND existingWindow)
+{
+	window = existingWindow;
+	can = new Canvas(window);
+}
 Window::~Window()
 {
 	for (auto it = list.begin(); it != list.end(); it++) {

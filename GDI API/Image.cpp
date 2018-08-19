@@ -55,8 +55,8 @@ Image::Image(gui::Resource res, HWND window)
 {
 	BITMAPFILEHEADER fileHeader;
 	BITMAPINFOHEADER infoHeader;
-	memcpy_s(&fileHeader, sizeof(BITMAPFILEHEADER), res.data, sizeof(BITMAPFILEHEADER));
-	memcpy_s(&infoHeader, sizeof(BITMAPINFOHEADER), res.data + sizeof(BITMAPFILEHEADER), sizeof(BITMAPINFOHEADER));
+	memcpy_s(&fileHeader, sizeof(BITMAPFILEHEADER), res.data.data(), sizeof(BITMAPFILEHEADER));
+	memcpy_s(&infoHeader, sizeof(BITMAPINFOHEADER), res.data.data() + sizeof(BITMAPFILEHEADER), sizeof(BITMAPINFOHEADER));
 	width = infoHeader.biWidth;
 	height = infoHeader.biHeight;
 	forcedWidth = width;
@@ -67,7 +67,7 @@ Image::Image(gui::Resource res, HWND window)
 	HDC dc = GetDC(gui::GUI::useWindow());
 	bmp = CreateDIBSection(dc, &bmi, DIB_RGB_COLORS, (void**)&rawData, NULL, NULL);
 	if (bmp == NULL) printf("Create DIB section failed %d \n", GetLastError());
-	if (SetDIBits(dc, bmp, 0, infoHeader.biHeight, res.data + sizeof(BITMAPINFOHEADER) + sizeof(BITMAPFILEHEADER), &bmi, DIB_RGB_COLORS) == 0) printf("Set Dibits failed %d \n", GetLastError());
+	if (SetDIBits(dc, bmp, 0, infoHeader.biHeight, res.data.data() + sizeof(BITMAPINFOHEADER) + sizeof(BITMAPFILEHEADER), &bmi, DIB_RGB_COLORS) == 0) printf("Set Dibits failed %d \n", GetLastError());
 	if (GetDIBits(dc, bmp, 0, infoHeader.biHeight, &rawData, &bmi, DIB_RGB_COLORS) == 0) printf("Get DIbits failed %d \n", GetLastError());
 	ReleaseDC(gui::GUI::useWindow(), dc);
 }

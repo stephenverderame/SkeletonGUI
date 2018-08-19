@@ -17,18 +17,16 @@ std::string loadFromTextFileToWin32ControlTextFormat(char * file) {
 	return fileText;
 }
 
-gui::Resource gui::GUI::loadResource(int file, int type)
+gui::Resource gui::GUI::loadResource(int file, int type, HMODULE handle)
 {
 	Resource res = {};
-	HMODULE handle = GetModuleHandle(NULL);
 	HRSRC rc = FindResource(handle, MAKEINTRESOURCE(file), MAKEINTRESOURCE(type));
+	if (rc == NULL) printf("Find resource fail! \n");
 	HGLOBAL rcData = LoadResource(handle, rc);
 	res.size = SizeofResource(handle, rc);
-	if (res.data != nullptr) delete[] res.data;
-	res.data = new char[res.size + 1];
 	const char * cpy = (char *)LockResource(rcData);
-	memcpy(res.data, cpy, res.size);
-	res.data[res.size] = '\0';
+	res.data.assign(cpy, res.size);
+	printf("Resource data: %s \n", res.data.c_str());
 	return res;
 
 }

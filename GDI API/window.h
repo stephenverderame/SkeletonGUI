@@ -50,6 +50,7 @@ public:
 	static Window * boundWindow;
 public:
 	Window(char * name, int style = NULL);
+	Window(HWND existingWindow);
 	~Window();
 	void use() { boundWindow = this; }
 	void show(bool v) { ShowWindow(window, v); }

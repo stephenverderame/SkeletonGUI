@@ -7,7 +7,7 @@ namespace gui {
 		std::string loadFromTextFileToWin32ControlTextFormat(char * file);
 	}
 	struct Resource {
-		char * data;
+		std::string data;
 		int size;
 		~Resource() { /*delete[] data;*/ }
 	};
@@ -21,7 +21,7 @@ namespace gui {
 		inline static void bindWindow(HWND wnd) { window = wnd; }
 		inline static HWND useWindow() { return window; }
 		inline static char * textFieldLoadFromFile(char * file) { return (char*)loadFromTextFileToWin32ControlTextFormat(file).c_str(); }
-		static Resource loadResource(int file, int type);
+		static Resource loadResource(int file, int type, HMODULE handle = GetModuleHandle(NULL));
 		inline static void setDimensions(int width, int height) {
 			_width = width;
 			_height = height;

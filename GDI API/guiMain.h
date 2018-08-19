@@ -14,6 +14,9 @@
 #include "Layout.h"
 #include "GUIS.h"
 namespace gui {
+#ifndef min
+#define min(a,b)            (((a) < (b)) ? (a) : (b))
+#endif
 #define GUI_PARAM_AND |
 #define GUI_PARAM_EXCLUDE ^
 #ifndef GUI_MACRO_DESC_ONLY

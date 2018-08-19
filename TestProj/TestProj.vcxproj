@@ -19,20 +19,19 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{C069AB6C-CB1D-494F-B6EF-AB8264643AFA}</ProjectGuid>
-    <RootNamespace>GDIAPI</RootNamespace>
+    <ProjectGuid>{2FB68454-1591-46C3-AA51-90BC38451038}</ProjectGuid>
+    <RootNamespace>TestProj</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
-    <ProjectName>GUI API</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
     <PlatformToolset>v140</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
@@ -70,10 +69,8 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>C:\Users\stephen\Desktop\coding stuff\glm-0.9.8.4\glm;$(IncludePath)</IncludePath>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>C:\Users\stephen\Desktop\coding stuff\glm-0.9.8.4\glm;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Users\stephen\Desktop\coding stuff\glm-0.9.8.4\glm;C:\Users\stephen\Documents\Visual Studio 2015\Projects\Puzzle Solver + GDI API\GDI API;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Users\stephen\Documents\Visual Studio 2015\Projects\Puzzle Solver + GDI API\Release;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -100,6 +97,7 @@
     <Link>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalDependencies>GUI API.lib;Opengl32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -116,45 +114,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="BasicList.h" />
-    <ClInclude Include="Canvas.h" />
-    <ClInclude Include="Dialog.h" />
-    <ClInclude Include="Drawable.h" />
-    <ClInclude Include="Event.h" />
-    <ClInclude Include="glad.h" />
-    <ClInclude Include="glControls.h" />
-    <ClInclude Include="glWindow.h" />
-    <ClInclude Include="guiMain.h" />
-    <ClInclude Include="guiMainEx.h" />
-    <ClInclude Include="GUIS.h" />
-    <ClInclude Include="Image.h" />
-    <ClInclude Include="khrplatform.h" />
-    <ClInclude Include="Layout.h" />
-    <ClInclude Include="linkedList.h" />
-    <ClInclude Include="Page.h" />
-    <ClInclude Include="resource.h" />
-    <ClInclude Include="stb_image.h" />
-    <ClInclude Include="window.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="BasicList.cpp" />
-    <ClCompile Include="Canvas.cpp" />
-    <ClCompile Include="Dialog.cpp" />
-    <ClCompile Include="Event.cpp" />
-    <ClCompile Include="glad.c" />
-    <ClCompile Include="glControls.cpp" />
-    <ClCompile Include="glWindow.cpp" />
-    <ClCompile Include="guiMain.cpp" />
-    <ClCompile Include="guiMainEx.cpp" />
-    <ClCompile Include="GUIS.cpp" />
-    <ClCompile Include="Image.cpp" />
-    <ClCompile Include="layout.cpp" />
-    <ClCompile Include="Page.cpp" />
-    <ClCompile Include="window.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="stdFrag.glsl" />
-    <None Include="stdVert.glsl" />
+    <ClCompile Include="Source.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

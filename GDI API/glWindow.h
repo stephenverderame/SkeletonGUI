@@ -1,8 +1,8 @@
 #pragma once
+#include "resource.h"
 #include "window.h"
 #include "glad.h"
 #include <sstream>
-#define SHADER_RESOURCE 0x890
 #define GLW_CHOOSE_PIXEL_FAIL 0x100
 #define GLW_SET_PIXEL_FAIL 0x200
 #define GLW_MAKE_CONTEXT_FAIL 0x300
@@ -23,6 +23,7 @@ public:
 	void * paintCallbackData;
 public:
 	GLWindow(char * name, int style = NULL);
+	GLWindow(HWND existingWindow);
 	~GLWindow();
 	void swapBuffers();
 	int initGL();
@@ -35,11 +36,12 @@ public:
 class GLShader {
 private:
 	unsigned int program;
-private:
+public:
 	void loadProgram(std::string vertexCode, std::string fragmentCode, std::string geometryCode = "", FILE * errstream = stderr);
 public:
+	GLShader() {};
 	GLShader(const char * vertexPath, const char * fragmentPath, const char * geometryPath = nullptr);
-	GLShader(int vertexResource, int fragmentResource, int geometryResource = -1, int resourceType = SHADER_RESOURCE);
+	GLShader(int vertexResource, int fragmentResource, int geometryResource = -1, int resourceType = SHADER_RESOURCE, HMODULE module = GetModuleHandle(NULL));
 	inline void use() { glUseProgram(program); }
 	inline void setInt(char * varName, int val) { glUniform1i(glGetUniformLocation(program, varName), val); }
 	inline void setFloat(char * varName, float val) { glUniform1f(glGetUniformLocation(program, varName), val); }

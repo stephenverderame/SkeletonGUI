@@ -19,7 +19,11 @@ int GLWindow::callStdProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l)
 
 GLWindow::GLWindow(char * name, int style) : Window(name, style), defErase(true)
 {
-	hdc = GetDC(window);
+}
+
+GLWindow::GLWindow(HWND existingWindow) : Window(existingWindow)
+{
+	hdc = GetDC(existingWindow);
 }
 
 GLWindow::~GLWindow()
@@ -34,17 +38,28 @@ void GLWindow::swapBuffers()
 }
 int GLWindow::initGL()
 {
-	PIXELFORMATDESCRIPTOR px;
+	hdc = GetDC(window);
+	if (hdc == INVALID_HANDLE_VALUE)
+		printf("Error invalid window dc");
 	int ret = 0;
-	ZeroMemory(&px, sizeof(px));
-	px.nSize = sizeof(px);
-	px.nVersion = 1;
-	px.dwFlags = PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER;
-	px.iPixelType = PFD_TYPE_RGBA;
-	px.cColorBits = 32;
-	px.cStencilBits = 32;
-	px.cDepthBits = 32;
-	px.cAlphaBits = 8;
+	PIXELFORMATDESCRIPTOR px = {
+		sizeof(PIXELFORMATDESCRIPTOR),
+		1,
+		PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,
+		PFD_TYPE_RGBA,
+		32,
+		0, 0, 0, 0, 0, 0,
+		0,
+		0,
+		0,
+		0, 0, 0, 0,
+		24,
+		8,
+		0,
+		PFD_MAIN_PLANE,
+		0,
+		0, 0, 0
+	};
 	ret = ChoosePixelFormat(hdc, &px);
 	if (!ret) return GLW_CHOOSE_PIXEL_FAIL;
 	if (SetPixelFormat(hdc, ret, &px) == 0) return GLW_SET_PIXEL_FAIL;
@@ -71,7 +86,7 @@ void GLShader::loadProgram(std::string vertexCode, std::string fragmentCode, std
 	int ret;
 	char infoLog[512];
 	vs = glCreateShader(GL_VERTEX_SHADER);
-	glShaderSource(GL_VERTEX_SHADER, 1, &vcode, NULL);
+	glShaderSource(vs, 1, &vcode, NULL);
 	glCompileShader(vs);
 	glGetShaderiv(vs, GL_COMPILE_STATUS, &ret);
 	if (!ret) {
@@ -80,7 +95,7 @@ void GLShader::loadProgram(std::string vertexCode, std::string fragmentCode, std
 	}
 
 	fs = glCreateShader(GL_FRAGMENT_SHADER);
-	glShaderSource(GL_FRAGMENT_SHADER, 1, &fcode, NULL);
+	glShaderSource(fs, 1, &fcode, NULL);
 	glCompileShader(fs);
 	glGetShaderiv(fs, GL_COMPILE_STATUS, &ret);
 	if (!ret) {
@@ -90,7 +105,7 @@ void GLShader::loadProgram(std::string vertexCode, std::string fragmentCode, std
 
 	if (geometryCode.size() > 1) {
 		gs = glCreateShader(GL_FRAGMENT_SHADER);
-		glShaderSource(GL_FRAGMENT_SHADER, 1, &fcode, NULL);
+		glShaderSource(gs, 1, &fcode, NULL);
 		glCompileShader(gs);
 		glGetShaderiv(gs, GL_COMPILE_STATUS, &ret);
 		if (!ret) {
@@ -121,14 +136,14 @@ GLShader::GLShader(const char * vertexPath, const char * fragmentPath, const cha
 	if (reader.is_open()) {
 		buffer << reader.rdbuf();
 		vs = buffer.str();
-		buffer.clear();
+		buffer.str(std::string());
 		reader.close();
 	}
 	reader.open(fragmentPath);
 	if (reader.is_open()) {
 		buffer << reader.rdbuf();
 		fs = buffer.str();
-		buffer.clear();
+		buffer.str(std::string());
 		reader.close();
 	}
 	if (geometryPath != nullptr) {
@@ -136,7 +151,7 @@ GLShader::GLShader(const char * vertexPath, const char * fragmentPath, const cha
 		if (reader.is_open()) {
 			buffer << reader.rdbuf();
 			gs = buffer.str();
-			buffer.clear();
+			buffer.str(std::string());
 			reader.close();
 		}
 		loadProgram(vs, fs, gs);
@@ -144,10 +159,11 @@ GLShader::GLShader(const char * vertexPath, const char * fragmentPath, const cha
 	else loadProgram(vs, fs);
 }
 
-GLShader::GLShader(int vertexResource, int fragmentResource, int geometryResource, int resourceType)
+GLShader::GLShader(int vertexResource, int fragmentResource, int geometryResource, int resourceType, HMODULE handle)
 {
-	gui::Resource v = gui::GUI::loadResource(vertexResource, resourceType);
-	gui::Resource f = gui::GUI::loadResource(fragmentResource, resourceType);
+	gui::Resource v = gui::GUI::loadResource(vertexResource, resourceType, handle);
+	gui::Resource f = gui::GUI::loadResource(fragmentResource, resourceType, handle);
+	printf("Vdata: %s \n", v.data.c_str());
 	if (geometryResource != -1) {
 		gui::Resource g = gui::GUI::loadResource(geometryResource, resourceType);
 		loadProgram(v.data, f.data, g.data);
