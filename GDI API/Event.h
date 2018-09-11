@@ -1,5 +1,6 @@
 #pragma once
 #include <windows.h>
+#include <functional>
 class EventParams {
 private:
 	LPARAM l;
@@ -33,12 +34,12 @@ public:
 };
 class EventListener {
 private:
-	void(*function)(EventParams);
+	std::function<void(EventParams)> function;
 	UINT message;
 public:
 	EventListener() {};
-	EventListener(void(*f)(EventParams), Event e) : function(f), message(e) {};
-	void setCallback(void(*func)(EventParams), Event e);
-	bool operator==(EventListener & other) { return message == other.message && function == other.function; };
+//	EventListener(void(*f)(EventParams), Event e) : function(f), message(e) {};
+	EventListener(std::function<void(EventParams)> f, Event e) : function(f), message(e) {};
+	void setCallback(std::function<void(EventParams)> f, Event e);
 	int operator()(Event msg, EventParams ep);
 };

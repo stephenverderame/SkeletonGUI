@@ -493,8 +493,8 @@ namespace gui {
 		RECT wndDim;
 		SCROLLINFO info;
 	private:
-		void(*hScrollAction)(int);
-		void(*vScrollAction)(int);
+		std::function<void(int)> hScrollAction;
+		std::function<void(int)> vScrollAction;
 	private:
 		void setScrollInfo(ControlType * c = nullptr) {
 			if (c != nullptr) {
@@ -528,7 +528,7 @@ namespace gui {
 			info.nPage = 1;
 			this->setScrollInfo();
 		}
-		void setScrollMessages(void(*hScroll)(int) = nullptr, void(*vScroll)(int) = nullptr) {
+		void setScrollMessages(std::function<void(int)> hScroll = nullptr, std::function<void(int)> vScroll = nullptr) {
 			if (hScroll != nullptr) hScrollAction = hScroll;
 			if (vScroll != nullptr) vScrollAction = vScroll;
 		}
@@ -553,7 +553,7 @@ namespace gui {
 			SetScrollInfo(parent, controlType == scrollHorz ? SB_HORZ : SB_VERT, &info, TRUE);
 		}
 		void handleMsg(MSG * msg) {
-			if (msg->hwnd != parent) return;
+//			if (msg->hwnd != parent) return;
 			if (msg->message == WM_SIZE) {
 				info.cbSize = sizeof(info);
 				info.fMask = SIF_RANGE;

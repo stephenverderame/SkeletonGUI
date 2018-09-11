@@ -105,6 +105,25 @@ Image::Image(int width, int height, int x, int y, HWND window) : width(width), h
 	ReleaseDC(gui::GUI::useWindow(), dc);
 }
 
+Image::Image(const Image & other) : Image(other.width, other.height)
+{
+	for (int i = 0; i < other.width * other.height; i++) {
+		int x = i % other.width;
+		int y = i / other.width;
+		setPixel(x, y, other.getPixel(x, y));
+	}
+}
+
+Image & Image::operator=(const Image & other)
+{
+	resize(other.width, other.height);
+	for (int i = 0; i < other.width * other.height; i++) {
+		int x = i % other.width;
+		int y = i / other.width;
+		setPixel(x, y, other.getPixel(x, y));
+	}
+}
+
 Image::Image() : bmp(NULL)
 {
 }
@@ -124,7 +143,7 @@ bool Image::setPixel(int x, int y, Color c)
 	return true;
 }
 
-Color Image::getPixel(int x, int y)
+Color Image::getPixel(int x, int y) const
 {
 	if (x < 0 || x >= width || y < 0 || y >= height) return{ 0, 0, 0 };
 	Color color;

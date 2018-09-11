@@ -32,10 +32,12 @@ public:
 	Image(gui::Resource res, HWND window = gui::GUI::useWindow());
 	Image(int width, int height, int x, int y, HWND window = gui::GUI::useWindow());
 	Image(int width, int height) : Image(width, height, 0, 0, gui::GUI::useWindow()) {};
+	Image(const Image & other);
+	Image& operator=(const Image & other);
 	Image();
 	~Image();
 	bool setPixel(int x, int y, Color c);
-	Color getPixel(int x, int y);
+	Color getPixel(int x, int y) const;
 	operator HBITMAP() { return bmp; }
 	HBITMAP getHandle() { return bmp; }
 	bool saveBmp(const char * fileName);

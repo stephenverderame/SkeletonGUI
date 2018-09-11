@@ -73,4 +73,5 @@ public:
 	static Window * getBoundWindow() { return boundWindow; }
 	Canvas * getCanvas() { return can; }
 	operator HWND() { return window;  }
+	HWND getHwnd() { return window; }
 };

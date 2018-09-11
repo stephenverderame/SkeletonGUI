@@ -1,5 +1,5 @@
 #include "Event.h"
-void EventListener::setCallback(void(*func)(EventParams), Event eventType)
+void EventListener::setCallback(std::function<void(EventParams)> func, Event eventType)
 {
 	function = func;
 	message = eventType;
