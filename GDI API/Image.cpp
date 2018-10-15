@@ -12,17 +12,17 @@ int getPoint(int x, int y, arrayData data) {
 	if (x < 0 || x >= data.width || y < 0 || y >= data.height) return 0;
 	return data.array[y * data.width + x];
 }
-Image::Image(const char * file, HWND window) : rawUpdated(false)
+Image::Image(const char * file, HWND window) : rawUpdated(false), integralImage(nullptr)
 {
 	int size = strlen(file);
 	if (file[size - 4] != '.' || tolower(file[size - 3]) != 'b' || tolower(file[size - 2]) != 'm' || tolower(file[size - 1]) != 'p') {
 		int width, height, components;
-		unsigned char * data = stbi_load(file, &width, &height, &components, 3);
+		unsigned char * data = stbi_load(file, &width, &height, &components, NULL);
 		resize(width, height);
 		for (int i = 0; i < width * height; i++) {
 			int x = i % width;
 			int y = i / width;
-			Color c = { data[i * 3 + 2], data[i * 3 + 1], data[i * 3] };
+			Color c = { data[i * components], data[i * components + 1], data[i * components + 2] };
 			setPixel(x, y, c);
 		}
 		stbi_image_free(data);
@@ -51,7 +51,7 @@ Image::Image(const char * file, int x, int y, HWND window) : Image(file, window)
 	this->y = y;
 }
 
-Image::Image(gui::Resource res, HWND window)
+Image::Image(gui::Resource res, HWND window) : integralImage(nullptr)
 {
 	BITMAPFILEHEADER fileHeader;
 	BITMAPINFOHEADER infoHeader;
@@ -72,7 +72,7 @@ Image::Image(gui::Resource res, HWND window)
 	ReleaseDC(gui::GUI::useWindow(), dc);
 }
 
-Image::Image(int width, int height, int x, int y, HWND window) : width(width), height(height), x(x), y(y)
+Image::Image(int width, int height, int x, int y, HWND window) : width(width), height(height), x(x), y(y), integralImage(nullptr)
 {
 	scanline = width * 3;
 	int padding = 0;
@@ -122,15 +122,25 @@ Image & Image::operator=(const Image & other)
 		int y = i / other.width;
 		setPixel(x, y, other.getPixel(x, y));
 	}
+	if (integralImage != nullptr) {
+		delete[] integralImage;
+		integralImage = nullptr;
+		if (other.integralImage != nullptr) {
+			integralImage = new int[other.width * other.height];
+			memcpy(integralImage, other.integralImage, sizeof(int) * other.width * other.height);
+		}
+	}
 }
 
-Image::Image() : bmp(NULL)
+Image::Image() : bmp(NULL), integralImage(nullptr)
 {
 }
 
 Image::~Image()
 {
 	DeleteDC(bmpHdc);
+	if (integralImage != nullptr)
+		delete[] integralImage;
 }
 
 bool Image::setPixel(int x, int y, Color c)
