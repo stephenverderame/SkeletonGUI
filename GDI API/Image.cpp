@@ -139,6 +139,7 @@ Image::Image() : bmp(NULL), integralImage(nullptr)
 Image::~Image()
 {
 	DeleteDC(bmpHdc);
+	DeleteObject(bmp);
 	if (integralImage != nullptr)
 		delete[] integralImage;
 }
