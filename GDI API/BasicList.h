@@ -7,10 +7,11 @@ struct ListCell {
 	int x = 0;
 	int y = 0;
 	COLORREF selectColor = RGB(255, 251, 204);
+	void * userData;
 	ListCell(Text * txt, Image * img, int x = 0, int y = 0) : txt(txt), img(img), x(x), y(y) {};
 	~ListCell();
 };
-#define LIST_BORDER_TRANSPARENT 0
+#define LIST_BORDER_TRANSPARENT -1
 #define LIST_BORDER_SOLID PS_SOLID
 #define LIST_BORDER_DASH PS_DASH
 #define LIST_BORDER_DOT PS_DOT
@@ -18,7 +19,7 @@ struct ListCell {
 #define LIST_BORDER_DASH_DOTDOT PS_DASHDOTDOT
 #define LIST_SPACING_UNEQUAL 0
 class BasicList;
-typedef void(*BasicListSelectedCallback)(int index, BasicList * parent);
+typedef void(*BasicListSelectedCallback)(int index, BasicList * parent, void * callbackData);
 class BasicList : public Drawable{
 private:
 	std::vector<ListCell *> cells;
@@ -32,6 +33,7 @@ private:
 	int spacing = LIST_SPACING_UNEQUAL;
 	int listTop;
 	BasicListSelectedCallback select;
+	void * callbackData;
 public:
 	BasicList(int x, int y, int width, int height) : x(x), y(y), width(width), height(height), listTop(0) {};
 	~BasicList();
@@ -40,6 +42,9 @@ public:
 	void setBorder(COLORREF b, int stroke, int style = LIST_BORDER_SOLID);
 	void setSpacing(int spacing) { this->spacing = spacing; }
 	void eventHandle(UINT msg, WPARAM w, LPARAM l);
-	void selectCallback(BasicListSelectedCallback callback) { select = callback; }
+	void selectCallback(BasicListSelectedCallback callback, void * data) { select = callback; callbackData = data; }
+	void scrollTo(int cellIndex);
+	void selectCell(int cellIndex);
+	void clearCells();
 	std::vector<ListCell *> * getCells() { return &cells; }
 };

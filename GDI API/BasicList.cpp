@@ -110,7 +110,7 @@ void BasicList::eventHandle(UINT msg, WPARAM w, LPARAM l)
 		int yClick = HIWORD(l);
 		for (int i = 0; i < cells.size(); i++) {
 			if (yClick >= cells[i]->y - listTop && yClick <= cells[i]->y + spacing - listTop)
-				if (this->select != nullptr) this->select(i, this);
+				if (this->select != nullptr) this->select(i, this, callbackData);
 		}
 	}
 	if (msg == WM_LBUTTONDOWN) {
@@ -125,17 +125,17 @@ void BasicList::eventHandle(UINT msg, WPARAM w, LPARAM l)
 		}
 		RECT r;
 		GetClientRect(gui::GUI::useWindow(), &r);
-		InvalidateRect(gui::GUI::useWindow(), &r, TRUE);
+		InvalidateRect(gui::GUI::useWindow(), &r, FALSE);
 	}
 	if (msg == WM_MOUSEWHEEL) {
 		int old = listTop;
-		listTop += (GET_WHEEL_DELTA_WPARAM(w) / (float)WHEEL_DELTA) * spacing;
+		listTop -= (GET_WHEEL_DELTA_WPARAM(w) / (float)WHEEL_DELTA) * spacing;
 		if (listTop < 0) listTop = 0;
 		if (listTop > cells.size() * spacing - height) listTop = old;
 		if (listTop != old) {
 			RECT r;
 			GetClientRect(gui::GUI::useWindow(), &r);
-			InvalidateRect(gui::GUI::useWindow(), &r, TRUE);
+			InvalidateRect(gui::GUI::useWindow(), &r, FALSE);
 		}
 	}
 	else if (msg == WM_KEYDOWN) {
@@ -150,9 +150,33 @@ void BasicList::eventHandle(UINT msg, WPARAM w, LPARAM l)
 		if (listTop != old) {
 			RECT r;
 			GetClientRect(gui::GUI::useWindow(), &r);
-			InvalidateRect(gui::GUI::useWindow(), &r, TRUE);
+			InvalidateRect(gui::GUI::useWindow(), &r, FALSE);
 		}
 	}
+}
+
+void BasicList::scrollTo(int cellIndex)
+{
+	listTop = cellIndex * spacing;
+	RECT r;
+	GetClientRect(gui::GUI::useWindow(), &r);
+	InvalidateRect(gui::GUI::useWindow(), &r, FALSE);
+}
+
+void BasicList::selectCell(int cellIndex)
+{
+	for (int i = 0; i < cells.size(); ++i) {
+		if (i == cellIndex) cells[i]->selected = true;
+		else cells[i]->selected = false;
+	}
+
+}
+
+void BasicList::clearCells()
+{
+	for (int i = 0; i < cells.size(); ++i)
+		delete cells[i];
+	cells.clear();
 }
 
 ListCell::~ListCell()

@@ -63,12 +63,12 @@ void Window::setWindowProperty(WindowProperty w, WNDCLASSEX p)
 		break;
 	}
 }
-void Window::createWindow(int x, int y, int width, int height)
+void Window::createWindow(int x, int y, int width, int height, int windowStyles)
 {
 	RECT size = { 0, 0, width, height };
 	AdjustWindowRect(&size, WS_OVERLAPPED, FALSE);
 	RegisterClassEx(&wc);
-	window = CreateWindowEx(NULL, wc.lpszClassName, windowName, WS_OVERLAPPEDWINDOW | wc.style, x, y, size.right - size.left, size.bottom - size.top, NULL, NULL, NULL, NULL);
+	window = CreateWindowEx(NULL, wc.lpszClassName, windowName, WS_OVERLAPPEDWINDOW | windowStyles, x, y, size.right - size.left, size.bottom - size.top, NULL, NULL, NULL, NULL);
 	ShowWindow(window, true);
 	wndDimensions.width = size.right - size.left;
 	wndDimensions.height = size.bottom - size.top;
@@ -111,6 +111,12 @@ void Window::updateDimensions(int width, int height)
 {
 	wndDimensions.width = width;
 	wndDimensions.height = height;
+}
+void Window::invalidateDisplay(bool erase)
+{
+	RECT r;
+	GetWindowRect(window, &r);
+	InvalidateRect(window, &r, erase);
 }
 Window::Window(char * name, int style)
 {

@@ -114,6 +114,21 @@ Image::Image(const Image & other) : Image(other.width, other.height)
 	}
 }
 
+Image::Image(HBITMAP bmp, HWND window)
+{
+	this->bmp = bmp;
+	this->parent = window;
+	BITMAP bm;
+	ZeroMemory(&bm, sizeof(bm));
+	GetObject(bmp, sizeof(bm), &bm);
+	rawData = (channel*)bm.bmBits;
+	scanline = bm.bmWidthBytes;
+	width = bm.bmWidth;
+	height = bm.bmHeight;
+	forcedWidth = width;
+	forcedHeight = height;
+}
+
 Image & Image::operator=(const Image & other)
 {
 	resize(other.width, other.height);
@@ -130,6 +145,7 @@ Image & Image::operator=(const Image & other)
 			memcpy(integralImage, other.integralImage, sizeof(int) * other.width * other.height);
 		}
 	}
+	return *this;
 }
 
 Image::Image() : bmp(NULL), integralImage(nullptr)

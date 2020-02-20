@@ -37,8 +37,9 @@ private:
 	std::vector<Text *> labels;
 	std::vector<Drawable *> objects;
 	HWND parentWindow;
+	bool dblBuffer;
 public:
-	Canvas(HWND parent = gui::GUI::useWindow()) : parentWindow(parent) {}
+	Canvas(HWND parent = gui::GUI::useWindow()) : parentWindow(parent), dblBuffer(false) {}
 	~Canvas();
 	void addImage(Image * bmp);
 	void addText(Text * txt);
@@ -48,6 +49,7 @@ public:
 	void handleMessages(UINT msg, WPARAM w, LPARAM l);
 	void draw();
 	void draw(HDC hdc);
+	void enableDoubleBuffering(bool enable) { dblBuffer = enable; }
 	std::vector<Image *> * getImages() { return &images; }
 	std::vector<Text *> * getLabels() { return &labels; }
 

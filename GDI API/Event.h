@@ -35,11 +35,14 @@ public:
 class EventListener {
 private:
 	std::function<void(EventParams)> function;
+	std::function<bool(EventParams)> function2;
 	UINT message;
 public:
 	EventListener() {};
 //	EventListener(void(*f)(EventParams), Event e) : function(f), message(e) {};
 	EventListener(std::function<void(EventParams)> f, Event e) : function(f), message(e) {};
+	EventListener(std::function<int(EventParams)> f, Event e, int) : function2(f), message(e) {};
 	void setCallback(std::function<void(EventParams)> f, Event e);
+	void setCallback2(std::function<int(EventParams)> f, Event e);
 	int operator()(Event msg, EventParams ep);
 };

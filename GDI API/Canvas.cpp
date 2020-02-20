@@ -44,9 +44,21 @@ void Canvas::draw()
 	BITMAP bm;
 	ZeroMemory(&paint, sizeof(paint));
 	HDC hdc = BeginPaint(parentWindow, &paint);
-	HDC hdcMem = CreateCompatibleDC(hdc);
-	draw(hdc);
-	DeleteDC(hdcMem);
+	if (dblBuffer) {
+		HDC hdcMem = CreateCompatibleDC(hdc);
+		RECT r;
+		GetClientRect(parentWindow, &r);
+		HBITMAP hbmMem = CreateCompatibleBitmap(hdc, r.right - r.left, r.bottom - r.top);
+		auto backup = SelectObject(hdcMem, hbmMem);
+		FillRect(hdcMem, &r, (HBRUSH)COLOR_WINDOW);
+		draw(hdcMem);
+		BitBlt(hdc, 0, 0, r.right - r.left, r.bottom - r.top, hdcMem, 0, 0, SRCCOPY);
+		SelectObject(hdcMem, backup);
+		DeleteObject(hbmMem);
+		DeleteDC(hdcMem);
+	}
+	else
+		draw(hdc);
 	EndPaint(parentWindow, &paint);
 }
 

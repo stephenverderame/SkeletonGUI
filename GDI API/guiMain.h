@@ -154,6 +154,8 @@ namespace gui {
 	class Button : public Control {
 	private:
 		void(*onClick)();
+		void(*onBtnPress)(void *);
+		void * callbackData;
 	protected:
 		void init() {
 			handle = CreateWindow("BUTTON", "", WS_CHILD | BS_PUSHBUTTON | WS_VISIBLE, 0, 0, 100, 50, parent, NULL, NULL, NULL);
@@ -163,6 +165,7 @@ namespace gui {
 		Button(char * id, int x, int y, int width, int height, char * title, void(*onClick)() = NULL, int params = NULL, HWND window = GUI::useWindow()) {
 			parent = window;
 			name = id; dimensions = { x, y, width, height }; originalDims = dimensions;
+			onBtnPress = nullptr;
 			if (onClick != NULL) {
 				selfHandle = true;
 				this->onClick = onClick;
@@ -180,10 +183,16 @@ namespace gui {
 			selfHandle = true;
 			onClick = click;
 		}
+		inline void setClick2(void(*click)(void *), void * data) {
+			selfHandle = true;
+			onBtnPress = click;
+			callbackData = data;
+		}
 		void handleMsg(MSG * msg) {
 			if (msg->hwnd != handle || msg->message != WM_LBUTTONDOWN) return;
 			Sleep(100);
-			onClick();
+			if (onBtnPress) onBtnPress(callbackData);
+			if(onClick) onClick();
 		}
 	};
 #define GUI_TEXTFIELD_VERT_SCROLL (ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL)

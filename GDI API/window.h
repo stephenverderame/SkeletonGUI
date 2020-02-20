@@ -49,7 +49,7 @@ protected:
 public:
 	static Window * boundWindow;
 public:
-	Window(char * name, int style = NULL);
+	Window(char * name, int classStyles = NULL);
 	Window(HWND existingWindow);
 	~Window();
 	void use() { boundWindow = this; }
@@ -58,7 +58,7 @@ public:
 	void fireEvent(Event e);
 	void removeEventListener(EventListener * e);
 	void setWindowProperty(WindowProperty w, WNDCLASSEX p);
-	void createWindow(int x, int y, int width, int height);
+	void createWindow(int x, int y, int width, int height, int windowStyles = NULL);
 	void setWindowProc(LRESULT (CALLBACK *callback)(HWND, UINT, WPARAM, LPARAM)) {
 		wndProc = callback;
 	}
@@ -74,4 +74,5 @@ public:
 	Canvas * getCanvas() { return can; }
 	operator HWND() { return window;  }
 	HWND getHwnd() { return window; }
+	void invalidateDisplay(bool sendEraseMsg);
 };

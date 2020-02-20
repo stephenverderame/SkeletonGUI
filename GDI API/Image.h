@@ -33,6 +33,7 @@ public:
 	Image(int width, int height, int x, int y, HWND window = gui::GUI::useWindow());
 	Image(int width, int height) : Image(width, height, 0, 0, gui::GUI::useWindow()) {};
 	Image(const Image & other);
+	Image(HBITMAP bmp, HWND window = gui::GUI::useWindow());
 	Image& operator=(const Image & other);
 	Image();
 	~Image();
